@@ -5,24 +5,31 @@
   <!-- Left: Product Grid (Compact) -->
   <div class="col-lg-8 d-flex flex-column h-100">
     <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-      <h5 class="fw-bold mb-0">Products</h5>
+      <h5 class="fw-bold mb-0 text-white">Products</h5>
       <div class="w-50">
-        <input type="text" id="productSearch" class="form-control form-control-sm" placeholder="Search...">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-surface border-secondary text-muted"><i
+              class="fa-solid fa-search"></i></span>
+          <input type="text" id="productSearch"
+            class="form-control form-control-sm bg-surface text-white border-secondary"
+            placeholder="Search products...">
+        </div>
       </div>
     </div>
 
-    <div class="bg-surface border rounded flex-grow-1 overflow-hidden d-flex flex-column">
+    <div class="bg-surface border border-secondary rounded flex-grow-1 overflow-hidden d-flex flex-column shadow-sm">
       <div class="overflow-auto p-2" style="max-height: calc(100vh - 160px);">
         <div class="row g-2" id="productGrid">
           {% for item in meat_items %}
           <div class="col-6 col-md-4 col-xl-3 product-item" data-name="{{ item.name|lower }}">
-            <div class="card h-100 product-card cursor-pointer border-0 shadow-sm bg-surface-hover"
+            <div class="card h-100 product-card cursor-pointer border-secondary shadow-sm bg-surface-hover"
               onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price_per_unit }}, '{{ item.unit }}', {{ item.stock_quantity }})">
               <div class="card-body p-2 text-center d-flex flex-column justify-content-center">
-                <h6 class="fw-bold mb-1 text-truncate small">{{ item.name }}</h6>
-                <div class="text-danger fw-bold small">KES {{ "%.2f"|format(item.price_per_unit) }}</div>
-                <div class="text-muted small" style="font-size: 0.75rem;">In Stock: {{
-                  "%.1f"|format(item.stock_quantity) }}</div>
+                <h6 class="fw-bold mb-1 text-truncate small text-white">{{ item.name }}</h6>
+                <div class="text-danger fw-bold small">KES {{ "%.2f"|format(item.price_per_unit) }}<span
+                    class="text-muted fw-normal">/{{ item.unit }}</span></div>
+                <div class="text-muted small" style="font-size: 0.75rem;">Stock: {{ "%.1f"|format(item.stock_quantity)
+                  }}</div>
               </div>
             </div>
           </div>
@@ -37,19 +44,23 @@
 
   <!-- Right: Cart (Compact List) -->
   <div class="col-lg-4 h-100">
-    <div class="card h-100 border shadow-sm d-flex flex-column">
-      <div class="card-header bg-transparent py-2 border-bottom d-flex justify-content-between align-items-center">
-        <span class="fw-bold small text-uppercase">Current Order</span>
-        <span class="badge bg-secondary" id="cartCount">0 items</span>
+    <div class="card h-100 border border-secondary shadow-sm d-flex flex-column bg-surface">
+      <div
+        class="card-header bg-transparent py-2 border-bottom border-secondary d-flex justify-content-between align-items-center">
+        <span class="fw-bold small text-uppercase text-white"><i class="fa-solid fa-cart-shopping me-2"></i>Current
+          Order</span>
+        <span class="badge bg-danger rounded-pill" id="cartCount">0</span>
       </div>
 
       <div class="card-body p-0 flex-grow-1 overflow-auto bg-body" id="cartItems">
         <div class="text-center py-5 text-muted empty-cart-msg">
+          <i class="fa-solid fa-basket-shopping fa-3x mb-3 opacity-25"></i>
           <p class="small mb-0">Cart is empty</p>
+          <p class="small opacity-50">Click products to add</p>
         </div>
       </div>
 
-      <div class="p-3 border-top bg-surface">
+      <div class="p-3 border-top border-secondary bg-surface">
         <form method="post" id="checkoutForm">
           <input type="hidden" name="customer_name" value="Walk-in Customer">
           <div id="formInputs"></div>
@@ -59,15 +70,17 @@
             <span id="cartSubtotal" class="font-monospace">0.00</span>
           </div>
           <div class="d-flex justify-content-between mb-3 align-items-end">
-            <span class="fw-bold">Total</span>
-            <span class="fw-bold fs-5 text-danger font-monospace" id="cartTotal">KES 0.00</span>
+            <span class="fw-bold text-white">Total</span>
+            <span class="fw-bold fs-4 text-danger font-monospace" id="cartTotal">KES 0.00</span>
           </div>
 
-          <button type="submit" class="btn btn-danger w-100 fw-bold text-uppercase" id="checkoutBtn" disabled>
-            Checkout
+          <button type="submit" class="btn btn-danger w-100 fw-bold text-uppercase py-2" id="checkoutBtn" disabled>
+            <i class="fa-solid fa-check me-2"></i> Complete Sale
           </button>
-          <button type="button" class="btn btn-sm btn-link text-muted w-100 mt-1" onclick="clearCart()">Clear
-            Cart</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2 border-secondary text-muted"
+            onclick="clearCart()">
+            Clear Cart
+          </button>
         </form>
       </div>
     </div>
@@ -75,26 +88,45 @@
 </div>
 
 <style>
+  /* Custom Styles for Input Number */
+  .qty-input {
+    background-color: #000 !important;
+    border: 1px solid #333 !important;
+    color: #fff !important;
+    text-align: center;
+    padding: 2px;
+    font-size: 0.9rem;
+    width: 60px;
+    -moz-appearance: textfield;
+  }
+
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .bg-surface {
+    background-color: #18181b !important;
+  }
+
   .bg-surface-hover {
-    background-color: #272727;
+    background-color: #27272a;
     transition: background 0.15s;
   }
 
   .bg-surface-hover:hover {
-    background-color: #333;
-  }
-
-  .bg-body {
-    background-color: #121212 !important;
-  }
-
-  .cursor-pointer {
+    background-color: #3f3f46;
     cursor: pointer;
   }
 
   .font-monospace {
-    font-feature-settings: "tnum";
-    font-variant-numeric: tabular-nums;
+    font-family: 'Courier New', monospace;
+    letter-spacing: -0.5px;
+  }
+
+  .border-secondary {
+    border-color: #3f3f46 !important;
   }
 </style>
 
@@ -107,10 +139,12 @@
 
   function addToCart(id, name, price, unit, stock) {
     if (cart[id]) {
-      if (cart[id].qty < stock) {
-        cart[id].qty++;
+      // Just increment by 1 for quick clicking
+      const newQty = cart[id].qty + 1;
+      if (newQty <= stock) {
+        cart[id].qty = newQty;
       } else {
-        alert('Not enough stock!');
+        alert('Stock limit reached!');
       }
     } else {
       cart[id] = { id, name, price, unit, qty: 1, stock };
@@ -118,15 +152,33 @@
     updateCartUI();
   }
 
+  // Update via Buttons (+ / -)
   function updateQty(id, delta) {
     if (!cart[id]) return;
     const newItemQty = cart[id].qty + delta;
     if (newItemQty <= 0) {
-      delete cart[id];
+      if (confirm("Remove item from cart?")) delete cart[id];
     } else if (newItemQty <= cart[id].stock) {
       cart[id].qty = newItemQty;
     } else {
       alert('Cannot exceed stock!');
+    }
+    updateCartUI();
+  }
+
+  // Direct Input Change
+  function setQty(id, value) {
+    if (!cart[id]) return;
+    const qty = parseFloat(value);
+
+    if (isNaN(qty) || qty <= 0) {
+      alert("Invalid quantity. Removing item.");
+      delete cart[id];
+    } else if (qty > cart[id].stock) {
+      alert(`Cannot exceed stock of ${cart[id].stock} ${cart[id].unit}`);
+      cart[id].qty = cart[id].stock;
+    } else {
+      cart[id].qty = qty;
     }
     updateCartUI();
   }
@@ -143,6 +195,10 @@
     const inputsContainer = document.getElementById('formInputs');
     const checkoutBtn = document.getElementById('checkoutBtn');
 
+    // Check if we are currently editing an input to avoid focus loss
+    const activeElement = document.activeElement;
+    const activeId = activeElement && activeElement.classList.contains('qty-input') ? activeElement.dataset.id : null;
+
     container.innerHTML = '';
     inputsContainer.innerHTML = '';
 
@@ -151,41 +207,56 @@
     const items = Object.values(cart);
 
     if (items.length === 0) {
-      container.innerHTML = `<div class="text-center py-5 text-muted empty-cart-msg"><p class="small mb-0">Cart is empty</p></div>`;
+      container.innerHTML = `
+            <div class="text-center py-5 text-muted empty-cart-msg">
+                <i class="fa-solid fa-basket-shopping fa-3x mb-3 opacity-25"></i>
+                <p class="small mb-0">Cart is empty</p>
+            </div>`;
       checkoutBtn.disabled = true;
     } else {
       checkoutBtn.disabled = false;
       items.forEach(item => {
         const lineTotal = item.qty * item.price;
         total += lineTotal;
-        count += item.qty;
+        count += 1; // Count items (lines), not sum of qty since mixed units
 
-        // Visual Item (Compact Row)
+        // Visual Item
         const div = document.createElement('div');
-        div.className = 'd-flex justify-content-between align-items-center p-2 border-bottom';
+        div.className = 'd-flex justify-content-between align-items-center p-3 border-bottom border-dark bg-surface';
         div.innerHTML = `
                 <div class="flex-grow-1 pe-2" style="min-width: 0;">
-                    <div class="fw-medium text-truncate small">${item.name}</div>
-                    <div class="text-muted" style="font-size: 0.75rem;">${formatMoney(item.price)}</div>
+                    <div class="fw-bold text-white text-truncate">${item.name}</div>
+                    <div class="text-muted small">@ ${formatMoney(item.price)}/${item.unit}</div>
                 </div>
-                <div class="d-flex align-items-center gap-1">
-                    <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-2" onclick="updateQty(${item.id}, -1)" style="height: 24px;">-</button>
-                    <span class="fw-medium text-center small" style="width: 24px;">${item.qty}</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-2" onclick="updateQty(${item.id}, 1)" style="height: 24px;">+</button>
+                
+                <div class="d-flex align-items-center gap-1 bg-black rounded border border-secondary p-1">
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, -1)">
+                        <i class="fa-solid fa-minus fa-xs"></i>
+                    </button>
+                    
+                    <input type="number" 
+                           class="form-control form-control-sm qty-input border-0 shadow-none" 
+                           value="${item.qty}" 
+                           step="0.1" 
+                           min="0.1" 
+                           data-id="${item.id}"
+                           onchange="setQty(${item.id}, this.value)">
+                           
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, 1)">
+                        <i class="fa-solid fa-plus fa-xs"></i>
+                    </button>
                 </div>
-                <div class="fw-bold ms-2 text-end font-monospace small" style="min-width: 60px;">${formatMoney(lineTotal)}</div>
+                
+                <div class="fw-bold ms-3 text-end font-monospace text-white" style="min-width: 70px;">
+                    ${formatMoney(lineTotal)}
+                </div>
             `;
         container.appendChild(div);
 
         // Hidden Form Inputs
-        const inputId = document.createElement('input');
-        inputId.type = 'hidden'; inputId.name = 'item_id'; inputId.value = item.id;
-
-        const inputQty = document.createElement('input');
-        inputQty.type = 'hidden'; inputQty.name = 'quantity'; inputQty.value = item.qty;
-
-        const inputPrice = document.createElement('input');
-        inputPrice.type = 'hidden'; inputPrice.name = 'unit_price'; inputPrice.value = item.price;
+        const inputId = document.createElement('input'); inputId.type = 'hidden'; inputId.name = 'item_id'; inputId.value = item.id;
+        const inputQty = document.createElement('input'); inputQty.type = 'hidden'; inputQty.name = 'quantity'; inputQty.value = item.qty;
+        const inputPrice = document.createElement('input'); inputPrice.type = 'hidden'; inputPrice.name = 'unit_price'; inputPrice.value = item.price;
 
         inputsContainer.appendChild(inputId);
         inputsContainer.appendChild(inputQty);
@@ -195,7 +266,15 @@
 
     document.getElementById('cartSubtotal').textContent = formatMoney(total);
     document.getElementById('cartTotal').textContent = 'KES ' + formatMoney(total);
-    document.getElementById('cartCount').textContent = count + ' items';
+    document.getElementById('cartCount').textContent = count;
+
+    // Restore focus if possible (tricky with full re-render, but usually onchange triggers on blur/enter so focus is already lost or acceptable to lose)
+    if (activeId) {
+      const newInput = container.querySelector(`.qty-input[data-id="${activeId}"]`);
+      if (newInput) {
+        newInput.focus();
+      }
+    }
   }
 
   // Product Search
