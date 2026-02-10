@@ -1,92 +1,90 @@
 /* ============================================
-   PRIME CUTS — PROFESSIONAL POS SYSTEM
-   Refined Design System
+   PRIME CUTS — HIGH CONTRAST DARK THEME
+   Refined Design System - v2 (Contrast Fixes)
    ============================================ */
 
 :root {
-  /* Solid Brand Colors */
-  --primary: #dc2626;
+  /* Brand Colors - Vibrant Red */
+  --primary: #ef4444;
+  /* Red-500, brighter for dark bg */
+  --primary-hover: #dc2626;
   /* Red-600 */
-  --primary-hover: #b91c1c;
-  /* Red-700 */
-  --primary-subtle: rgba(220, 38, 38, 0.1);
+  --primary-subtle: rgba(239, 68, 68, 0.15);
 
-  /* Neutral Colors - Clean Dark Theme */
-  --bg-body: #121212;
-  --bg-surface: #1e1e1e;
-  --bg-surface-hover: #272727;
-  --bg-border: #333333;
+  /* Neutral Colors - High Contrast Dark Theme */
+  --bg-body: #09090b;
+  /* Very Dark Gray (almost black) */
+  --bg-surface: #18181b;
+  /* Dark Gray/Zinc-900 */
+  --bg-surface-hover: #27272a;
+  /* Slightly lighter for hover */
+  --bg-border: #3f3f46;
+  /* Zinc-700 (Lighter border for visibility) */
 
-  /* Text Colors */
-  --text-main: #e5e5e5;
-  --text-muted: #a3a3a3;
+  /* Text Colors - High Contrast */
+  --text-main: #f4f4f5;
+  /* Zinc-100 (Bright White-ish) */
+  --text-muted: #a1a1aa;
+  /* Zinc-400 (Light Gray, readable) */
   --text-inverse: #ffffff;
+  /* Pure White */
 
-  /* Semantic Colors */
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-
-  /* Sizing & Spacing */
+  /* Sizing */
   --radius: 6px;
-  /* Smaller, cleaner radius */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* === BASE RESET === */
 body {
   background-color: var(--bg-body);
   color: var(--text-main);
   font-family: var(--font-sans);
   font-size: 0.9rem;
-  /* Slightly compact base size */
   line-height: 1.5;
 }
 
-/* === UTILITIES === */
-a {
-  text-decoration: none;
-  color: inherit;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-inverse);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
 }
 
-.text-primary {
-  color: var(--primary) !important;
+/* Force light text on common containers to fix contrast issues */
+.card,
+.modal-content,
+.dropdown-menu,
+.list-group-item {
+  color: var(--text-main);
 }
 
-.bg-surface {
-  background-color: var(--bg-surface);
-}
-
-.border-subtle {
-  border: 1px solid var(--bg-border);
-}
-
-/* === COMPONENTS === */
+/* === COMPONENT OVERRIDES === */
 
 /* Navbar */
 .navbar {
   background-color: var(--bg-surface) !important;
   border-bottom: 1px solid var(--bg-border);
   padding: 0.5rem 1rem;
-  /* Compact padding */
-  box-shadow: none;
 }
 
 .navbar-brand {
-  font-size: 1.1rem;
-  font-weight: 600;
+  color: var(--text-inverse) !important;
+  font-weight: 700;
 }
 
 .nav-link {
-  font-size: 0.9rem;
-  padding: 0.4rem 0.8rem !important;
-  border-radius: var(--radius);
-  transition: background 0.1s;
+  color: var(--text-muted) !important;
+  font-weight: 500;
 }
 
 .nav-link:hover,
 .nav-link.active {
-  background-color: var(--bg-surface-hover);
   color: var(--text-inverse) !important;
+  background-color: var(--bg-surface-hover);
 }
 
 /* Cards */
@@ -94,120 +92,129 @@ a {
   background-color: var(--bg-surface);
   border: 1px solid var(--bg-border);
   border-radius: var(--radius);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  /* Subtle shadow */
+  box-shadow: none;
+  /* Flat design */
   margin-bottom: 1rem;
 }
 
 .card-header {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: transparent;
   border-bottom: 1px solid var(--bg-border);
   padding: 0.75rem 1rem;
   font-weight: 600;
-  font-size: 0.95rem;
+  color: var(--text-inverse);
 }
 
-.card-body {
-  padding: 1rem;
+.card-footer {
+  background-color: transparent;
+  border-top: 1px solid var(--bg-border);
+}
+
+/* Forms & Inputs */
+.form-control,
+.form-select {
+  background-color: #000000;
+  /* Black background for inputs */
+  border: 1px solid var(--bg-border);
+  color: var(--text-inverse) !important;
+  /* Force white text */
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.form-control::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: #000000;
+  border-color: var(--primary);
+  color: var(--text-inverse);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* Fix select dropdown arrow for dark mode */
+.form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
 }
 
 /* Buttons */
 .btn {
-  font-size: 0.9rem;
+  font-weight: 500;
   padding: 0.4rem 1rem;
   border-radius: var(--radius);
-  font-weight: 500;
   transition: all 0.15s;
-  border: 1px solid transparent;
 }
 
 .btn-danger {
   background-color: var(--primary);
+  border: 1px solid var(--primary);
   color: white;
 }
 
 .btn-danger:hover {
   background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .btn-outline-secondary {
   border-color: var(--bg-border);
-  color: var(--text-muted);
+  color: var(--text-main);
+  /* Light text */
 }
 
 .btn-outline-secondary:hover {
   background-color: var(--bg-surface-hover);
-  color: var(--text-main);
   border-color: var(--text-muted);
-}
-
-/* Forms */
-.form-control,
-.form-select {
-  background-color: #18181b;
-  border: 1px solid var(--bg-border);
-  color: var(--text-main);
-  font-size: 0.9rem;
-  border-radius: var(--radius);
-  padding: 0.5rem 0.75rem;
-}
-
-.form-control:focus,
-.form-select:focus {
-  background-color: #18181b;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
-  color: var(--text-main);
-}
-
-.form-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 0.4rem;
+  color: var(--text-inverse);
 }
 
 /* Tables */
 .table {
   color: var(--text-main);
-  font-size: 0.9rem;
+  border-color: var(--bg-border);
   margin-bottom: 0;
 }
 
+.table> :not(caption)>*>* {
+  background-color: transparent;
+  /* Remove bootstrap defaults */
+  border-bottom-color: var(--bg-border);
+  color: var(--text-main);
+  padding: 0.75rem;
+}
+
 .table th {
-  background-color: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--bg-border);
+  font-weight: 600;
   color: var(--text-muted);
-  font-weight: 500;
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.5px;
-  padding: 0.75rem;
-}
-
-.table td {
   border-bottom: 1px solid var(--bg-border);
-  padding: 0.75rem;
-  vertical-align: middle;
 }
 
-.table-hover tbody tr:hover {
+.table-hover tbody tr:hover>* {
   background-color: var(--bg-surface-hover);
+  color: var(--text-inverse);
 }
 
-/* Alerts & Badges */
-.alert {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--bg-border);
-  color: var(--text-main);
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  border-radius: var(--radius);
+/* Utilities */
+.text-muted {
+  color: var(--text-muted) !important;
 }
 
-.badge {
-  font-weight: 500;
-  padding: 0.35em 0.65em;
-  border-radius: 4px;
+.bg-body {
+  background-color: var(--bg-body) !important;
+}
+
+.bg-surface {
+  background-color: var(--bg-surface) !important;
+}
+
+.border-subtle {
+  border-color: var(--bg-border) !important;
 }
 
 /* Print Overrides */
@@ -221,6 +228,7 @@ a {
     border: none;
     box-shadow: none;
     background: transparent;
+    color: black !important;
   }
 
   .no-print {
@@ -229,11 +237,24 @@ a {
 
   .table th,
   .table td {
-    border-color: #ddd !important;
+    border-color: #000 !important;
     color: black !important;
   }
 
   .navbar {
     display: none;
+  }
+
+  .bg-surface,
+  .bg-body {
+    background: white !important;
+  }
+
+  .text-muted {
+    color: #555 !important;
+  }
+
+  .text-inverse {
+    color: black !important;
   }
 }
