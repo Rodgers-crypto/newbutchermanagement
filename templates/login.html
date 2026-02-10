@@ -1,30 +1,86 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-header bg-danger text-white text-center">
-        <h5 class="mb-0">Butcher Shop Login</h5>
+<div class="row align-items-center justify-content-center min-vh-100 mt-n5">
+  <div class="col-md-5 col-lg-4">
+    <div class="card login-card p-4">
+      <div class="text-center mb-4">
+        <svg width="64" height="64" viewBox="0 0 48 48" fill="none" class="mb-3">
+          <rect width="48" height="48" rx="12" fill="url(#loginIconGrad)" />
+          <path d="M14 34V18C14 15.79 15.79 14 18 14H30C32.21 14 34 15.79 34 18V34" stroke="white" stroke-width="2.5"
+            stroke-linecap="round" />
+          <path d="M10 34H38" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+          <circle cx="24" cy="24" r="4" stroke="white" stroke-width="2" fill="none" />
+          <defs>
+            <linearGradient id="loginIconGrad" x1="0" y1="0" x2="48" y2="48">
+              <stop stop-color="#ef4444" />
+              <stop offset="1" stop-color="#b91c1c" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <h3 class="fw-bold mb-1 text-white">Welcome Back</h3>
+        <p class="text-muted small">Sign in to access the POS system</p>
       </div>
-      <div class="card-body">
-        <form method="post" novalidate>
-          <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="username" name="username" required autofocus>
+
+      <form method="post" novalidate>
+        <div class="mb-3">
+          <label class="form-label text-white-50 small text-uppercase fw-bold">Username</label>
+          <div class="input-group">
+            <span class="input-group-text bg-transparent border-end-0 text-muted">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0 text-white" name="username"
+              placeholder="Enter username" required autofocus style="background: rgba(255,255,255,0.05);">
           </div>
-          <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label text-white-50 small text-uppercase fw-bold">Password</label>
+          <div class="input-group">
+            <span class="input-group-text bg-transparent border-end-0 text-muted">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </span>
+            <input type="password" class="form-control border-start-0 ps-0 text-white" name="password"
+              placeholder="Enter password" required style="background: rgba(255,255,255,0.05);">
           </div>
-          <button type="submit" class="btn btn-danger w-100">Login</button>
-        </form>
-        <p class="mt-3 small text-muted">
-          Default admin: <strong>admin / admin123</strong> (change password after first login).
-        </p>
+        </div>
+
+        <button type="submit" class="btn btn-danger w-100 py-2 fw-bold text-uppercase ls-1">
+          Sign In
+        </button>
+      </form>
+
+      <div class="mt-4 pt-3 border-top border-secondary text-center">
+        <p class="text-muted small mb-0">Default access:</p>
+        <div class="d-flex justify-content-center gap-3 mt-2">
+          <span class="badge bg-dark border border-secondary fw-normal">admin / admin123</span>
+          <span class="badge bg-dark border border-secondary fw-normal">cashier / 1234</span>
+        </div>
       </div>
     </div>
   </div>
-  </div>
-{% endblock %}
+</div>
 
+<style>
+  /* Custom tweaks for login page only */
+  body {
+    background: radial-gradient(circle at top right, #1f0505, #0a0a0a);
+  }
+
+  .input-group-text {
+    border-color: var(--border-default);
+  }
+
+  .form-control:focus {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: var(--red-500);
+    box-shadow: none;
+  }
+</style>
+{% endblock %}

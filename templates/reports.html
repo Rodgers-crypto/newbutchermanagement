@@ -1,88 +1,154 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4 class="mb-0">Sales Reports</h4>
-  <form method="get" class="d-flex gap-2 align-items-center">
-    <label class="small text-muted mb-0">Period</label>
-    <select name="period" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="daily" {% if period == 'daily' %}selected{% endif %}>Daily</option>
-      <option value="weekly" {% if period == 'weekly' %}selected{% endif %}>Weekly (this week)</option>
-      <option value="monthly" {% if period == 'monthly' %}selected{% endif %}>Monthly (this month)</option>
-    </select>
-    <button type="button" class="btn btn-outline-secondary btn-sm no-print" onclick="window.print()">Print</button>
-  </form>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0">Sales Reports</h2>
+  <div class="gap-2 d-flex">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+      <svg width="18" height="18" fill="none" class="me-2" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M19 12H5" />
+        <path d="M12 19l-7-7 7-7" />
+      </svg>
+      Dashboard
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-secondary d-none d-md-block">
+      <svg width="18" height="18" class="me-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="6 9 6 2 18 2 18 9" />
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+        <rect x="6" y="14" width="12" height="8" />
+      </svg>
+      PDF / Print
+    </button>
+  </div>
 </div>
 
-<div class="row g-3">
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-header bg-light">
-        <strong>Summary</strong>
-        <span class="text-muted small">({{ start_date }} to {{ end_date }})</span>
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 mb-4 bg-transparent shadow-none">
+      <form method="get" class="row gx-3 gy-2 align-items-center">
+        <div class="col-auto">
+          <label class="form-label mb-0 fw-bold text-muted">Time Period:</label>
+        </div>
+        <div class="col-auto">
+          <select name="period" class="form-select bg-surface-secondary border-0 fw-bold text-white shadow-sm"
+            onchange="this.form.submit()">
+            <option value="daily" {% if period=='daily' %}selected{% endif %}>Daily (Today)</option>
+            <option value="weekly" {% if period=='weekly' %}selected{% endif %}>Weekly (Last 7 Days)</option>
+            <option value="monthly" {% if period=='monthly' %}selected{% endif %}>Monthly (This Month)</option>
+          </select>
+        </div>
+        <div class="col-auto ms-auto text-muted small">
+          Displaying data from <strong>{{ start_date }}</strong> to <strong>{{ end_date }}</strong>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Summary Chart / Table -->
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100 border-0 shadow-sm bg-surface-secondary">
+      <div class="card-header border-0 bg-transparent pt-4 pb-0 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0">Sales Overview</h5>
+        <span class="badge bg-danger-subtle text-danger">{{ summary_rows|length }} Days</span>
       </div>
       <div class="card-body">
         {% if summary_rows %}
         <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle mb-0">
-            <thead>
+          <table class="table table-hover align-middle mb-0">
+            <thead class="text-muted text-uppercase small letter-spacing-1">
               <tr>
-                <th>Date</th>
-                <th class="text-end"># Sales</th>
-                <th class="text-end">Total</th>
+                <th class="border-0">Date</th>
+                <th class="text-end border-0">Transactions</th>
+                <th class="text-end border-0">Revenue</th>
               </tr>
             </thead>
             <tbody>
-              {% for r in summary_rows %}
+              {% for row in summary_rows %}
               <tr>
-                <td>{{ r.sale_date }}</td>
-                <td class="text-end">{{ r.num_sales }}</td>
-                <td class="text-end">{{ "%.2f"|format(r.total_sales or 0) }}</td>
+                <td class="fw-medium">{{ row.sale_date }}</td>
+                <td class="text-end text-muted">{{ row.num_sales }}</td>
+                <td class="text-end fw-bold text-white">KES {{ "%.2f"|format(row.total_sales) }}</td>
               </tr>
               {% endfor %}
             </tbody>
+            <tfoot class="border-top border-secondary">
+              <tr class="fw-bold fs-5">
+                <td class="pt-3">Total</td>
+                <td class="text-end pt-3"></td>
+                <td class="text-end text-danger pt-3">KES {{ "%.2f"|format(summary_rows|sum(attribute='total_sales')) }}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         {% else %}
-        <p class="text-muted mb-0">No sales for this period.</p>
+        <div class="text-center py-5 text-muted">
+          No sales data found for this period.
+        </div>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-header bg-light">
-        <strong>By Meat Item</strong>
+  <!-- Breakdown by Item -->
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100 border-0 shadow-sm bg-surface-secondary">
+      <div class="card-header border-0 bg-transparent pt-4 pb-0">
+        <h5 class="fw-bold mb-0">Top Products</h5>
       </div>
       <div class="card-body">
         {% if by_item_rows %}
         <div class="table-responsive">
-          <table class="table table-sm table-striped align-middle mb-0">
-            <thead>
+          <table class="table table-hover align-middle mb-0">
+            <thead class="text-muted text-uppercase small letter-spacing-1">
               <tr>
-                <th>Meat</th>
-                <th class="text-end">Qty Sold</th>
-                <th class="text-end">Amount</th>
+                <th class="border-0">Product</th>
+                <th class="text-end border-0">Qty Sold</th>
+                <th class="text-end border-0">Total</th>
               </tr>
             </thead>
             <tbody>
-              {% for r in by_item_rows %}
+              {% for row in by_item_rows %}
               <tr>
-                <td>{{ r.name }}</td>
-                <td class="text-end">{{ "%.2f"|format(r.total_qty or 0) }}</td>
-                <td class="text-end">{{ "%.2f"|format(r.total_amount or 0) }}</td>
+                <td class="d-flex align-items-center gap-2">
+                  <span class="avatar bg-danger-subtle text-danger rounded-circle p-1"
+                    style="width: 24px; height: 24px; font-size: 12px;">🥩</span>
+                  {{ row.name }}
+                </td>
+                <td class="text-end text-muted">{{ "%.1f"|format(row.total_qty) }}</td>
+                <td class="text-end fw-medium">KES {{ "%.2f"|format(row.total_amount) }}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <p class="text-muted mb-0">No item breakdown available.</p>
+        <div class="text-center py-5 text-muted">
+          No product data available.
+        </div>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
 
+<style>
+  .avatar {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .bg-surface-secondary {
+    background: var(--surface-secondary) !important;
+  }
+
+  .text-danger-subtle {
+    color: #fecaca !important;
+  }
+
+  .bg-danger-subtle {
+    background-color: rgba(220, 38, 38, 0.2) !important;
+  }
+</style>
+{% endblock %}

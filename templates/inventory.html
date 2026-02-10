@@ -1,33 +1,71 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4 class="mb-0">Inventory</h4>
-  <a href="{{ url_for('inventory_add') }}" class="btn btn-danger btn-sm">Add Meat Item</a>
+<div class="row align-items-center mb-4">
+  <div class="col">
+    <h2 class="fw-bold mb-0">Inventory</h2>
+    <p class="text-muted mb-0">Manage products and stock</p>
+  </div>
+  <div class="col-auto">
+    <a href="{{ url_for('inventory_add') }}" class="btn btn-danger d-flex align-items-center gap-2 shadow-sm">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+      Add New Item
+    </a>
+  </div>
 </div>
 
-<div class="card shadow-sm">
-  <div class="card-body">
+<div class="card border-0 bg-surface-secondary shadow-sm">
+  <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-striped table-hover align-middle">
-        <thead>
+      <table class="table table-hover align-middle mb-0">
+        <thead class="bg-surface-elevated text-uppercase text-muted small letter-spacing-1">
           <tr>
-            <th>Name</th>
-            <th class="text-center">Unit</th>
-            <th class="text-end">Price / Unit</th>
-            <th class="text-end">Stock</th>
-            <th></th>
+            <th class="ps-4 border-0">Product Name</th>
+            <th class="ps-4 border-0 text-center">Unit</th>
+            <th class="ps-4 border-0 text-end">Price / Unit</th>
+            <th class="ps-4 border-0 text-end">Stock Level</th>
+            <th class="ps-4 border-0 text-end pe-4">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="border-top-0">
           {% for item in items %}
           <tr>
-            <td>{{ item.name }}</td>
-            <td class="text-center">{{ item.unit }}</td>
-            <td class="text-end">{{ "%.2f"|format(item.price_per_unit) }}</td>
-            <td class="text-end">{{ "%.2f"|format(item.stock_quantity) }}</td>
+            <td class="ps-4">
+              <div class="d-flex align-items-center gap-3">
+                <div class="avatar bg-danger-subtle text-danger rounded p-2">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6" />
+                    <path d="M9 12V6a3 3 0 0 1 6 0v6" />
+                  </svg>
+                </div>
+                <span class="fw-medium">{{ item.name }}</span>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-secondary-subtle text-muted text-uppercase fw-normal px-2">{{ item.unit }}</span>
+            </td>
+            <td class="text-end fw-bold text-success-subtle">KES {{ "%.2f"|format(item.price_per_unit) }}</td>
             <td class="text-end">
-              <a href="{{ url_for('inventory_edit', item_id=item.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              {% if item.stock_quantity <= 5 %} <span
+                class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 gap-1 d-inline-flex align-items-center">
+                <span class="msg-dot bg-danger"></span>
+                {{ "%.1f"|format(item.stock_quantity) }}
+                </span>
+                {% else %}
+                <span class="fw-medium text-muted">{{ "%.1f"|format(item.stock_quantity) }}</span>
+                {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <a href="{{ url_for('inventory_edit', item_id=item.id) }}"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                Edit
+              </a>
             </td>
           </tr>
           {% endfor %}
@@ -36,5 +74,17 @@
     </div>
   </div>
 </div>
-{% endblock %}
 
+<style>
+  .bg-surface-elevated {
+    background: #252525;
+  }
+
+  .msg-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+</style>
+{% endblock %}
