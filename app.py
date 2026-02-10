@@ -380,6 +380,26 @@ def register_routes(app: Flask) -> None:
         conn.close()
         return render_template("inventory_form.html", item=item)
 
+    @app.route("/inventory/<int:item_id>/delete", methods=["POST"])
+    @login_required
+    @admin_required
+    def inventory_delete(item_id):
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM meat_items WHERE id = ?", (item_id,))
+        item = cur.fetchone()
+
+        if item is None:
+            conn.close()
+            flash("Item not found.", "danger")
+            return redirect(url_for("inventory_list"))
+
+        cur.execute("DELETE FROM meat_items WHERE id = ?", (item_id,))
+        conn.commit()
+        conn.close()
+        flash(f"Item '{item['name']}' deleted.", "success")
+        return redirect(url_for("inventory_list"))
+
     @app.route("/sales/new", methods=["GET", "POST"])
     @login_required
     def new_sale():

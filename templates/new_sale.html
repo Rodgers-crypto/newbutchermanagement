@@ -172,15 +172,43 @@
     const qty = parseFloat(value);
 
     if (isNaN(qty) || qty <= 0) {
-      alert("Invalid quantity. Removing item.");
-      delete cart[id];
+      cart[id].qty = 0;
     } else if (qty > cart[id].stock) {
-      alert(`Cannot exceed stock of ${cart[id].stock} ${cart[id].unit}`);
       cart[id].qty = cart[id].stock;
     } else {
       cart[id].qty = qty;
     }
-    updateCartUI();
+
+    calculateTotals();
+    syncHiddenInputs();
+  }
+
+  function calculateTotals() {
+    let total = 0;
+    let count = 0;
+    Object.values(cart).forEach(item => {
+      total += item.qty * item.price;
+      if (item.qty > 0) count++;
+      const lineTotalEl = document.querySelector(`.line-total[data-id="${item.id}"]`);
+      if (lineTotalEl) lineTotalEl.textContent = formatMoney(item.qty * item.price);
+    });
+    document.getElementById('cartSubtotal').textContent = formatMoney(total);
+    document.getElementById('cartTotal').textContent = 'KES ' + formatMoney(total);
+    document.getElementById('cartCount').textContent = count;
+    document.getElementById('checkoutBtn').disabled = (total <= 0);
+  }
+
+  function syncHiddenInputs() {
+    const inputsContainer = document.getElementById('formInputs');
+    inputsContainer.innerHTML = '';
+    Object.values(cart).forEach(item => {
+      if (item.qty > 0) {
+        const idInp = document.createElement('input'); idInp.type = 'hidden'; idInp.name = 'item_id'; idInp.value = item.id;
+        const qtyInp = document.createElement('input'); qtyInp.type = 'hidden'; qtyInp.name = 'quantity'; qtyInp.value = item.qty;
+        const priInp = document.createElement('input'); priInp.type = 'hidden'; priInp.name = 'unit_price'; priInp.value = item.price;
+        inputsContainer.appendChild(idInp); inputsContainer.appendChild(qtyInp); inputsContainer.appendChild(priInp);
+      }
+    });
   }
 
   function clearCart() {
@@ -192,35 +220,15 @@
 
   function updateCartUI() {
     const container = document.getElementById('cartItems');
-    const inputsContainer = document.getElementById('formInputs');
     const checkoutBtn = document.getElementById('checkoutBtn');
-
-    // Check if we are currently editing an input to avoid focus loss
-    const activeElement = document.activeElement;
-    const activeId = activeElement && activeElement.classList.contains('qty-input') ? activeElement.dataset.id : null;
-
+    const activeId = document.activeElement && document.activeElement.classList.contains('qty-input') ? document.activeElement.dataset.id : null;
     container.innerHTML = '';
-    inputsContainer.innerHTML = '';
-
-    let total = 0;
-    let count = 0;
     const items = Object.values(cart);
-
     if (items.length === 0) {
-      container.innerHTML = `
-            <div class="text-center py-5 text-muted empty-cart-msg">
-                <i class="fa-solid fa-basket-shopping fa-3x mb-3 opacity-25"></i>
-                <p class="small mb-0">Cart is empty</p>
-            </div>`;
-      checkoutBtn.disabled = true;
+      container.innerHTML = `<div class="text-center py-5 text-muted empty-cart-msg"><i class="fa-solid fa-basket-shopping fa-3x mb-3 opacity-25"></i><p class="small mb-0">Cart is empty</p></div>`;
     } else {
-      checkoutBtn.disabled = false;
       items.forEach(item => {
         const lineTotal = item.qty * item.price;
-        total += lineTotal;
-        count += 1; // Count items (lines), not sum of qty since mixed units
-
-        // Visual Item
         const div = document.createElement('div');
         div.className = 'd-flex justify-content-between align-items-center p-3 border-bottom border-dark bg-surface';
         div.innerHTML = `
@@ -228,52 +236,20 @@
                     <div class="fw-bold text-white text-truncate">${item.name}</div>
                     <div class="text-muted small">@ ${formatMoney(item.price)}/${item.unit}</div>
                 </div>
-                
                 <div class="d-flex align-items-center gap-1 bg-black rounded border border-secondary p-1">
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, -1)">
-                        <i class="fa-solid fa-minus fa-xs"></i>
-                    </button>
-                    
-                    <input type="number" 
-                           class="form-control form-control-sm qty-input border-0 shadow-none" 
-                           value="${item.qty}" 
-                           step="0.1" 
-                           min="0.1" 
-                           data-id="${item.id}"
-                           onchange="setQty(${item.id}, this.value)">
-                           
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, 1)">
-                        <i class="fa-solid fa-plus fa-xs"></i>
-                    </button>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, -1)"><i class="fa-solid fa-minus fa-xs"></i></button>
+                    <input type="number" class="form-control form-control-sm qty-input border-0 shadow-none text-white text-center" value="${item.qty}" step="0.01" min="0" data-id="${item.id}" oninput="setQty(${item.id}, this.value)" style="width: 70px; background: transparent;">
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, 1)"><i class="fa-solid fa-plus fa-xs"></i></button>
                 </div>
-                
-                <div class="fw-bold ms-3 text-end font-monospace text-white" style="min-width: 70px;">
-                    ${formatMoney(lineTotal)}
-                </div>
-            `;
+                <div class="fw-bold ms-3 text-end font-monospace text-white line-total" data-id="${item.id}" style="min-width: 70px;">${formatMoney(lineTotal)}</div>`;
         container.appendChild(div);
-
-        // Hidden Form Inputs
-        const inputId = document.createElement('input'); inputId.type = 'hidden'; inputId.name = 'item_id'; inputId.value = item.id;
-        const inputQty = document.createElement('input'); inputQty.type = 'hidden'; inputQty.name = 'quantity'; inputQty.value = item.qty;
-        const inputPrice = document.createElement('input'); inputPrice.type = 'hidden'; inputPrice.name = 'unit_price'; inputPrice.value = item.price;
-
-        inputsContainer.appendChild(inputId);
-        inputsContainer.appendChild(inputQty);
-        inputsContainer.appendChild(inputPrice);
       });
     }
-
-    document.getElementById('cartSubtotal').textContent = formatMoney(total);
-    document.getElementById('cartTotal').textContent = 'KES ' + formatMoney(total);
-    document.getElementById('cartCount').textContent = count;
-
-    // Restore focus if possible (tricky with full re-render, but usually onchange triggers on blur/enter so focus is already lost or acceptable to lose)
+    calculateTotals();
+    syncHiddenInputs();
     if (activeId) {
       const newInput = container.querySelector(`.qty-input[data-id="${activeId}"]`);
-      if (newInput) {
-        newInput.focus();
-      }
+      if (newInput) newInput.focus();
     }
   }
 
