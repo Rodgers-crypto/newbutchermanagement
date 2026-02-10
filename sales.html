@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Prime Cuts Butcher Shop — Point of Sale Terminal">
+    <title>POS — Sales Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="pos-layout">
+
+        <!-- Top Navigation Bar -->
+        <header class="top-bar">
+            <div class="top-bar-brand">
+                <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+                    <rect width="48" height="48" rx="10" fill="url(#bg)" />
+                    <path d="M14 34V18C14 15.79 15.79 14 18 14H30C32.21 14 34 15.79 34 18V34" stroke="white"
+                        stroke-width="2.5" stroke-linecap="round" />
+                    <path d="M10 34H38" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="24" cy="24" r="4" stroke="white" stroke-width="2" fill="none" />
+                    <defs>
+                        <linearGradient id="bg" x1="0" y1="0" x2="48" y2="48">
+                            <stop stop-color="#C62828" />
+                            <stop offset="1" stop-color="#8E0000" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h2>Prime Cuts <span style="font-weight:400;color:var(--gray-500);font-size:0.875rem;">POS</span></h2>
+            </div>
+            <div class="top-bar-info">
+                <span class="clock" id="clock"></span>
+                <div class="user-badge">
+                    <span class="dot"></span>
+                    <span>Cashier</span>
+                </div>
+                <button class="btn-logout" id="btn-logout" onclick="logout()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Products Panel (Left) -->
+        <main class="products-panel" id="products-panel">
+            <div class="panel-header">
+                <h3>Products</h3>
+                <div class="search-input">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input type="text" id="search-products" placeholder="Search products..." oninput="filterProducts()">
+                </div>
+            </div>
+
+            <!-- Category Tabs -->
+            <div class="category-tabs" id="category-tabs">
+                <button class="category-tab active" data-category="all" onclick="setCategory('all')">All</button>
+                <button class="category-tab" data-category="beef" onclick="setCategory('beef')">🥩 Beef</button>
+                <button class="category-tab" data-category="poultry" onclick="setCategory('poultry')">🍗
+                    Poultry</button>
+                <button class="category-tab" data-category="pork" onclick="setCategory('pork')">🐖 Pork</button>
+                <button class="category-tab" data-category="lamb" onclick="setCategory('lamb')">🐑 Lamb</button>
+                <button class="category-tab" data-category="sausages" onclick="setCategory('sausages')">🌭
+                    Sausages</button>
+                <button class="category-tab" data-category="other" onclick="setCategory('other')">📦 Other</button>
+            </div>
+
+            <!-- Product Grid -->
+            <div class="product-grid" id="product-grid">
+                <!-- Populated by JS -->
+            </div>
+        </main>
+
+        <!-- Cart Panel (Right) -->
+        <aside class="cart-panel" id="cart-panel">
+            <div class="cart-header">
+                <h3>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1" />
+                        <circle cx="20" cy="21" r="1" />
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                    </svg>
+                    Current Sale
+                    <span class="cart-count" id="cart-count">0</span>
+                </h3>
+                <button class="btn-clear-cart" id="btn-clear-cart" onclick="clearCart()">Clear All</button>
+            </div>
+
+            <div class="cart-items" id="cart-items">
+                <div class="cart-empty" id="cart-empty">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1" />
+                        <circle cx="20" cy="21" r="1" />
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                    </svg>
+                    <p>No items added yet</p>
+                    <p style="font-size: 0.75rem; margin-top: 4px;">Click a product to add it</p>
+                </div>
+            </div>
+
+            <div class="cart-footer" id="cart-footer">
+                <div class="cart-summary">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span class="font-mono" id="subtotal">KES 0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Tax (16% VAT)</span>
+                        <span class="font-mono" id="tax">KES 0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total</span>
+                        <span class="amount font-mono" id="total">KES 0.00</span>
+                    </div>
+                </div>
+                <button class="btn-checkout" id="btn-checkout" onclick="openCheckout()" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                        <line x1="1" y1="10" x2="23" y2="10" />
+                    </svg>
+                    Proceed to Checkout
+                </button>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal-overlay" id="checkout-modal">
+        <div class="modal">
+            <h3>Complete Sale</h3>
+            <p class="modal-subtitle">Total: <strong class="text-red font-mono" id="modal-total">KES 0.00</strong></p>
+
+            <div class="modal-field">
+                <label for="payment-method">Payment Method</label>
+                <select id="payment-method" onchange="handlePaymentMethodChange()">
+                    <option value="cash">Cash</option>
+                    <option value="mpesa">M-Pesa</option>
+                    <option value="card">Card</option>
+                </select>
+            </div>
+
+            <div class="modal-field" id="cash-received-field">
+                <label for="cash-received">Cash Received (KES)</label>
+                <input type="number" id="cash-received" placeholder="0.00" min="0" step="0.01"
+                    oninput="calculateChange()">
+            </div>
+
+            <div class="change-display" id="change-display" style="display: none;">
+                <div class="change-label">Change Due</div>
+                <div class="change-amount font-mono" id="change-amount">KES 0.00</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick="closeCheckout()">Cancel</button>
+                <button class="btn btn-primary" id="btn-complete-sale" onclick="completeSale()">Complete Sale</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receipt-modal">
+        <div class="modal">
+            <div class="receipt-container" id="receipt-content">
+                <!-- Receipt content generated by JS -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick="closeReceipt()">Close</button>
+                <button class="btn btn-primary" onclick="printReceipt()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        //  PRODUCT DATA
+        // =============================================
+        const products = [
+            // Beef
+            { id: 1, name: 'Beef Steak', price: 850, category: 'beef', emoji: '🥩', unit: 'per kg' },
+            { id: 2, name: 'Beef Mince', price: 650, category: 'beef', emoji: '🥩', unit: 'per kg' },
+            { id: 3, name: 'Beef Ribs', price: 750, category: 'beef', emoji: '🥩', unit: 'per kg' },
+            { id: 4, name: 'Beef Fillet', price: 1200, category: 'beef', emoji: '🥩', unit: 'per kg' },
+            { id: 5, name: 'Beef Bones', price: 200, category: 'beef', emoji: '🦴', unit: 'per kg' },
+            { id: 6, name: 'Beef Liver', price: 450, category: 'beef', emoji: '🥩', unit: 'per kg' },
+            { id: 7, name: 'T-Bone Steak', price: 950, category: 'beef', emoji: '🥩', unit: 'per kg' },
+
+            // Poultry
+            { id: 8, name: 'Whole Chicken', price: 750, category: 'poultry', emoji: '🍗', unit: 'each' },
+            { id: 9, name: 'Chicken Breast', price: 550, category: 'poultry', emoji: '🍗', unit: 'per kg' },
+            { id: 10, name: 'Chicken Wings', price: 400, category: 'poultry', emoji: '🍗', unit: 'per kg' },
+            { id: 11, name: 'Chicken Thighs', price: 450, category: 'poultry', emoji: '🍗', unit: 'per kg' },
+            { id: 12, name: 'Chicken Gizzards', price: 350, category: 'poultry', emoji: '🍗', unit: 'per kg' },
+
+            // Pork
+            { id: 13, name: 'Pork Chops', price: 600, category: 'pork', emoji: '🐖', unit: 'per kg' },
+            { id: 14, name: 'Pork Ribs', price: 700, category: 'pork', emoji: '🐖', unit: 'per kg' },
+            { id: 15, name: 'Pork Belly', price: 550, category: 'pork', emoji: '🐖', unit: 'per kg' },
+            { id: 16, name: 'Bacon', price: 480, category: 'pork', emoji: '🥓', unit: 'per 500g' },
+            { id: 17, name: 'Ham', price: 520, category: 'pork', emoji: '🐖', unit: 'per kg' },
+
+            // Lamb
+            { id: 18, name: 'Lamb Leg', price: 900, category: 'lamb', emoji: '🐑', unit: 'per kg' },
+            { id: 19, name: 'Lamb Chops', price: 1100, category: 'lamb', emoji: '🐑', unit: 'per kg' },
+            { id: 20, name: 'Lamb Shoulder', price: 850, category: 'lamb', emoji: '🐑', unit: 'per kg' },
+
+            // Sausages
+            { id: 21, name: 'Beef Sausages', price: 450, category: 'sausages', emoji: '🌭', unit: 'per kg' },
+            { id: 22, name: 'Pork Sausages', price: 400, category: 'sausages', emoji: '🌭', unit: 'per kg' },
+            { id: 23, name: 'Chicken Sausages', price: 380, category: 'sausages', emoji: '🌭', unit: 'per kg' },
+            { id: 24, name: 'Smokies', price: 350, category: 'sausages', emoji: '🌭', unit: 'per pack' },
+
+            // Other
+            { id: 25, name: 'Eggs (Tray)', price: 450, category: 'other', emoji: '🥚', unit: 'per tray' },
+            { id: 26, name: 'Cooking Oil', price: 320, category: 'other', emoji: '🫒', unit: 'per litre' },
+            { id: 27, name: 'Salt', price: 50, category: 'other', emoji: '🧂', unit: 'per pack' },
+        ];
+
+        // =============================================
+        //  STATE
+        // =============================================
+        let cart = [];
+        let currentCategory = 'all';
+        let saleNumber = parseInt(localStorage.getItem('saleNumber') || '1000');
+
+        // =============================================
+        //  CLOCK
+        // =============================================
+        function updateClock() {
+            const now = new Date();
+            const opts = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            document.getElementById('clock').textContent = now.toLocaleDateString('en-KE', opts);
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // =============================================
+        //  PRODUCTS RENDERING
+        // =============================================
+        function renderProducts() {
+            const searchTerm = document.getElementById('search-products').value.toLowerCase();
+            const grid = document.getElementById('product-grid');
+
+            const filtered = products.filter(p => {
+                const matchCategory = currentCategory === 'all' || p.category === currentCategory;
+                const matchSearch = p.name.toLowerCase().includes(searchTerm);
+                return matchCategory && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color: var(--gray-500); padding: 40px;">No products found</p>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => `
+                <div class="product-card" onclick="addToCart(${p.id})" id="product-${p.id}">
+                    <span class="product-emoji">${p.emoji}</span>
+                    <span class="product-name">${p.name}</span>
+                    <span class="product-price">KES ${p.price.toLocaleString()} <span class="product-unit">${p.unit}</span></span>
+                </div>
+            `).join('');
+        }
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.category === cat);
+            });
+            renderProducts();
+        }
+
+        function filterProducts() {
+            renderProducts();
+        }
+
+        // =============================================
+        //  CART MANAGEMENT
+        // =============================================
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const existing = cart.find(item => item.id === productId);
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+
+            // Quick visual feedback on the product card
+            const card = document.getElementById('product-' + productId);
+            if (card) {
+                card.style.borderColor = 'var(--red-500)';
+                card.style.boxShadow = '0 0 20px rgba(220,38,38,0.2)';
+                setTimeout(() => {
+                    card.style.borderColor = '';
+                    card.style.boxShadow = '';
+                }, 300);
+            }
+
+            renderCart();
+        }
+
+        function updateQty(productId, delta) {
+            const item = cart.find(i => i.id === productId);
+            if (!item) return;
+
+            item.qty += delta;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => i.id !== productId);
+            }
+
+            renderCart();
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(i => i.id !== productId);
+            renderCart();
+        }
+
+        function clearCart() {
+            if (cart.length === 0) return;
+            if (confirm('Clear all items from the cart?')) {
+                cart = [];
+                renderCart();
+            }
+        }
+
+        function getCartTotals() {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const tax = Math.round(subtotal * 0.16 * 100) / 100;
+            const total = subtotal + tax;
+            return { subtotal, tax, total };
+        }
+
+        function renderCart() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartEmpty = document.getElementById('cart-empty');
+            const cartCount = document.getElementById('cart-count');
+            const btnCheckout = document.getElementById('btn-checkout');
+
+            const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+            cartCount.textContent = totalItems;
+
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = `
+                    <div class="cart-empty">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                        </svg>
+                        <p>No items added yet</p>
+                        <p style="font-size: 0.75rem; margin-top: 4px;">Click a product to add it</p>
+                    </div>`;
+                btnCheckout.disabled = true;
+            } else {
+                cartItemsContainer.innerHTML = cart.map(item => `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${item.emoji} ${item.name}</div>
+                            <div class="cart-item-price">KES ${item.price.toLocaleString()} × ${item.qty}</div>
+                        </div>
+                        <div class="cart-item-qty">
+                            <button class="qty-btn remove" onclick="updateQty(${item.id}, -1)" aria-label="Decrease quantity">−</button>
+                            <span class="qty-value">${item.qty}</span>
+                            <button class="qty-btn" onclick="updateQty(${item.id}, 1)" aria-label="Increase quantity">+</button>
+                        </div>
+                        <span class="cart-item-total font-mono">KES ${(item.price * item.qty).toLocaleString()}</span>
+                    </div>
+                `).join('');
+                btnCheckout.disabled = false;
+            }
+
+            // Update totals
+            const { subtotal, tax, total } = getCartTotals();
+            document.getElementById('subtotal').textContent = 'KES ' + subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('tax').textContent = 'KES ' + tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('total').textContent = 'KES ' + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // =============================================
+        //  CHECKOUT
+        // =============================================
+        function openCheckout() {
+            if (cart.length === 0) return;
+            const { total } = getCartTotals();
+            document.getElementById('modal-total').textContent = 'KES ' + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('cash-received').value = '';
+            document.getElementById('change-display').style.display = 'none';
+            document.getElementById('payment-method').value = 'cash';
+            document.getElementById('cash-received-field').style.display = 'block';
+            document.getElementById('checkout-modal').classList.add('active');
+        }
+
+        function closeCheckout() {
+            document.getElementById('checkout-modal').classList.remove('active');
+        }
+
+        function handlePaymentMethodChange() {
+            const method = document.getElementById('payment-method').value;
+            const cashField = document.getElementById('cash-received-field');
+            const changeDisplay = document.getElementById('change-display');
+
+            if (method === 'cash') {
+                cashField.style.display = 'block';
+            } else {
+                cashField.style.display = 'none';
+                changeDisplay.style.display = 'none';
+            }
+        }
+
+        function calculateChange() {
+            const { total } = getCartTotals();
+            const cashReceived = parseFloat(document.getElementById('cash-received').value) || 0;
+            const changeDisplay = document.getElementById('change-display');
+            const changeAmount = document.getElementById('change-amount');
+
+            if (cashReceived >= total) {
+                const change = cashReceived - total;
+                changeAmount.textContent = 'KES ' + change.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                changeDisplay.style.display = 'block';
+            } else {
+                changeDisplay.style.display = 'none';
+            }
+        }
+
+        function completeSale() {
+            const { total, subtotal, tax } = getCartTotals();
+            const method = document.getElementById('payment-method').value;
+
+            if (method === 'cash') {
+                const cashReceived = parseFloat(document.getElementById('cash-received').value) || 0;
+                if (cashReceived < total) {
+                    alert('Insufficient cash received. Total is KES ' + total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+                    return;
+                }
+            }
+
+            // Generate sale number
+            saleNumber++;
+            localStorage.setItem('saleNumber', saleNumber.toString());
+
+            // Save sale to local storage
+            const sale = {
+                id: saleNumber,
+                items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, total: i.price * i.qty })),
+                subtotal,
+                tax,
+                total,
+                paymentMethod: method,
+                cashReceived: method === 'cash' ? parseFloat(document.getElementById('cash-received').value) : total,
+                change: method === 'cash' ? (parseFloat(document.getElementById('cash-received').value) || 0) - total : 0,
+                date: new Date().toISOString(),
+                cashier: 'Cashier'
+            };
+
+            // Store in localStorage
+            const sales = JSON.parse(localStorage.getItem('sales') || '[]');
+            sales.push(sale);
+            localStorage.setItem('sales', JSON.stringify(sales));
+
+            // Close checkout, show receipt
+            closeCheckout();
+            showReceipt(sale);
+
+            // Clear cart
+            cart = [];
+            renderCart();
+        }
+
+        // =============================================
+        //  RECEIPT
+        // =============================================
+        function showReceipt(sale) {
+            const receiptDate = new Date(sale.date);
+            const formattedDate = receiptDate.toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
+            const formattedTime = receiptDate.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+
+            const itemsHtml = sale.items.map(item =>
+                `<div class="receipt-line">
+                    <span>${item.name} x${item.qty}</span>
+                    <span>KES ${(item.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>`
+            ).join('');
+
+            document.getElementById('receipt-content').innerHTML = `
+                <div class="receipt-header">
+                    <h4>🥩 Prime Cuts Butcher Shop</h4>
+                    <p>123 Market Street, Nairobi</p>
+                    <p>Tel: +254 700 123 456</p>
+                    <p>PIN: P051234567X</p>
+                </div>
+                <div class="receipt-line">
+                    <span>Receipt #${sale.id}</span>
+                    <span>${formattedDate}</span>
+                </div>
+                <div class="receipt-line">
+                    <span>Cashier: ${sale.cashier}</span>
+                    <span>${formattedTime}</span>
+                </div>
+                <hr class="receipt-divider">
+                ${itemsHtml}
+                <hr class="receipt-divider">
+                <div class="receipt-line">
+                    <span>Subtotal</span>
+                    <span>KES ${sale.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div class="receipt-line">
+                    <span>VAT (16%)</span>
+                    <span>KES ${sale.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <hr class="receipt-divider">
+                <div class="receipt-line receipt-total">
+                    <span>TOTAL</span>
+                    <span>KES ${sale.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <hr class="receipt-divider">
+                <div class="receipt-line">
+                    <span>Payment: ${sale.paymentMethod.toUpperCase()}</span>
+                    <span>KES ${sale.cashReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                ${sale.change > 0 ? `<div class="receipt-line"><span>Change</span><span>KES ${sale.change.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>` : ''}
+                <div class="receipt-footer">
+                    <p>Thank you for shopping with us!</p>
+                    <p>Goods once sold are not returnable</p>
+                </div>
+            `;
+
+            document.getElementById('receipt-modal').classList.add('active');
+        }
+
+        function closeReceipt() {
+            document.getElementById('receipt-modal').classList.remove('active');
+        }
+
+        function printReceipt() {
+            window.print();
+        }
+
+        // =============================================
+        //  LOGOUT
+        // =============================================
+        function logout() {
+            if (cart.length > 0) {
+                if (!confirm('You have items in the cart. Are you sure you want to logout?')) return;
+            }
+            window.location.href = 'Home.html';
+        }
+
+        // =============================================
+        //  KEYBOARD SHORTCUTS
+        // =============================================
+        document.addEventListener('keydown', function (e) {
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                closeCheckout();
+                closeReceipt();
+            }
+            // F2 to focus search
+            if (e.key === 'F2') {
+                e.preventDefault();
+                document.getElementById('search-products').focus();
+            }
+        });
+
+        // =============================================
+        //  INIT
+        // =============================================
+        renderProducts();
+        renderCart();
+    </script>
+
+</body>
+
+</html>

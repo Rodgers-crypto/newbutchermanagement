@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Butcher Shop POS System - Secure Login Portal">
+    <title>Butcher Shop POS — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-page">
+
+    <!-- Ambient Background Shapes -->
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <div class="login-container" id="login-container">
+        <!-- Logo / Branding -->
+        <div class="login-brand">
+            <div class="brand-icon">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="48" height="48" rx="12" fill="url(#brandGrad)"/>
+                    <path d="M14 34V18C14 15.79 15.79 14 18 14H30C32.21 14 34 15.79 34 18V34" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M10 34H38" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="24" cy="24" r="4" stroke="white" stroke-width="2" fill="none"/>
+                    <path d="M20 28L18 34" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M28 28L30 34" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="brandGrad" x1="0" y1="0" x2="48" y2="48">
+                            <stop stop-color="#C62828"/>
+                            <stop offset="1" stop-color="#8E0000"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <h1 class="brand-title">Prime Cuts</h1>
+            <p class="brand-subtitle">Butcher Shop POS System</p>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" onsubmit="return false;" autocomplete="off">
+            <div class="input-group" id="username-group">
+                <label for="username">Username</label>
+                <div class="input-wrapper">
+                    <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <input type="text" id="username" placeholder="Enter your username" required>
+                </div>
+            </div>
+
+            <div class="input-group" id="password-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                    <button type="button" class="toggle-password" id="toggle-password" onclick="togglePassword()" aria-label="Toggle password visibility">
+                        <svg id="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <svg id="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Message Area -->
+            <div id="message-area" class="message-area" role="alert" aria-live="polite"></div>
+
+            <!-- Action Buttons -->
+            <div class="login-actions">
+                <button type="button" class="btn btn-primary" id="btn-cashier-login" onclick="loginUser()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 11 12 14 22 4"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                    <span>Cashier Login</span>
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-admin-login" onclick="adminLogin()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <span>Admin Login</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Footer -->
+        <div class="login-footer">
+            <p>&copy; 2026 Prime Cuts Butcher Shop. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        // ===== PASSWORD TOGGLE =====
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const eyeOpen = document.getElementById('eye-open');
+            const eyeClosed = document.getElementById('eye-closed');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeOpen.style.display = 'none';
+                eyeClosed.style.display = 'block';
+            } else {
+                passwordInput.type = 'password';
+                eyeOpen.style.display = 'block';
+                eyeClosed.style.display = 'none';
+            }
+        }
+
+        // ===== MESSAGE DISPLAY =====
+        function showMessage(text, type) {
+            const messageArea = document.getElementById('message-area');
+            messageArea.textContent = text;
+            messageArea.className = 'message-area ' + type;
+            messageArea.style.display = 'block';
+
+            // Auto-hide success messages after 3s
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageArea.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function clearMessage() {
+            const messageArea = document.getElementById('message-area');
+            messageArea.style.display = 'none';
+            messageArea.textContent = '';
+            messageArea.className = 'message-area';
+        }
+
+        // ===== FIELD VALIDATION =====
+        function validateFields() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const usernameGroup = document.getElementById('username-group');
+            const passwordGroup = document.getElementById('password-group');
+
+            // Reset states
+            usernameGroup.classList.remove('error');
+            passwordGroup.classList.remove('error');
+            clearMessage();
+
+            let isValid = true;
+
+            if (!username) {
+                usernameGroup.classList.add('error');
+                isValid = false;
+            }
+            if (!password) {
+                passwordGroup.classList.add('error');
+                isValid = false;
+            }
+
+            if (!isValid) {
+                showMessage('Please fill in all fields.', 'error');
+            }
+
+            return isValid ? { username, password } : null;
+        }
+
+        // ===== BUTTON LOADING STATE =====
+        function setLoading(buttonId, loading) {
+            const btn = document.getElementById(buttonId);
+            if (loading) {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        // ===== CASHIER LOGIN =====
+        function loginUser() {
+            const fields = validateFields();
+            if (!fields) return;
+
+            setLoading('btn-cashier-login', true);
+
+            // Simulate brief authentication delay for UX
+            setTimeout(() => {
+                if (fields.username === 'cashier' && fields.password === '1234') {
+                    showMessage('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'sales.html';
+                    }, 800);
+                } else {
+                    setLoading('btn-cashier-login', false);
+                    showMessage('Invalid cashier credentials. Please try again.', 'error');
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+            }, 600);
+        }
+
+        // ===== ADMIN LOGIN =====
+        function adminLogin() {
+            const fields = validateFields();
+            if (!fields) return;
+
+            setLoading('btn-admin-login', true);
+
+            // Simulate brief authentication delay for UX
+            setTimeout(() => {
+                if (fields.username === 'admin' && fields.password === 'admin123') {
+                    showMessage('Admin access granted! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 800);
+                } else {
+                    setLoading('btn-admin-login', false);
+                    showMessage('Invalid admin credentials. Please try again.', 'error');
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+            }, 600);
+        }
+
+        // ===== ENTER KEY SUPPORT =====
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                loginUser();
+            }
+        });
+
+        // ===== CLEAR ERRORS ON INPUT =====
+        document.getElementById('username').addEventListener('input', function() {
+            document.getElementById('username-group').classList.remove('error');
+            clearMessage();
+        });
+        document.getElementById('password').addEventListener('input', function() {
+            document.getElementById('password-group').classList.remove('error');
+            clearMessage();
+        });
+
+        // ===== ENTRANCE ANIMATION =====
+        window.addEventListener('load', function() {
+            document.getElementById('login-container').classList.add('visible');
+        });
+    </script>
+</body>
+</html>
