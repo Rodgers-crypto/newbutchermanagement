@@ -143,11 +143,13 @@
     <div class="container-fluid">
       <!-- Brand & Toggler Container -->
       <div class="d-flex align-items-center">
+        {% if g.user %}
         <button class="navbar-toggler border-0 me-2 p-1 focus-ring focus-ring-danger" type="button"
           data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu"
           aria-label="Toggle navigation">
           <i class="fa-solid fa-bars fa-lg text-white"></i>
         </button>
+        {% endif %}
         <a class="navbar-brand d-flex align-items-center gap-2 m-0" href="{{ url_for('dashboard') }}">
           <i class="fa-solid fa-cloud-meatball text-danger"></i>
           <span>Prime Cuts</span>
@@ -156,6 +158,7 @@
 
       <!-- Sidebar (Offcanvas on Mobile / Visible on Desktop) -->
       <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu">
+        {% if g.user %}
         <div class="offcanvas-header">
           <h5 class="offcanvas-title d-flex align-items-center gap-2">
             <i class="fa-solid fa-cloud-meatball text-danger"></i> Prime Cuts
@@ -163,6 +166,7 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
             aria-label="Close"></button>
         </div>
+        {% endif %}
 
         <div class="offcanvas-body">
           {% if g.user %}

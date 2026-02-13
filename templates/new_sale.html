@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Toast Container -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;" id="toastContainer"></div>
+
 <div class="row g-3 h-100">
   <!-- Left: Product Grid (Compact) -->
   <div class="col-lg-8 d-flex flex-column h-100">
@@ -137,14 +140,42 @@
     return amount.toFixed(2);
   }
 
+  function showToast(message, type = 'danger') {
+    const container = document.getElementById('toastContainer');
+    const id = 'toast-' + Date.now();
+    const iconMap = {
+      danger: 'fa-circle-exclamation',
+      warning: 'fa-triangle-exclamation',
+      success: 'fa-circle-check',
+      info: 'fa-circle-info'
+    };
+    const icon = iconMap[type] || iconMap.info;
+    const toast = document.createElement('div');
+    toast.id = id;
+    toast.className = 'toast align-items-center border-0 mb-2 show';
+    toast.setAttribute('role', 'alert');
+    toast.style.cssText = 'background: #1c1c1f; border: 1px solid #3f3f46; min-width: 280px;';
+    toast.innerHTML = `
+      <div class="d-flex align-items-center gap-2 p-3">
+        <i class="fa-solid ${icon} text-${type}"></i>
+        <div class="small text-white flex-grow-1">${message}</div>
+        <button type="button" class="btn-close btn-close-white ms-2" onclick="this.closest('.toast').remove()" style="font-size: 0.6rem;"></button>
+      </div>`;
+    container.appendChild(toast);
+    setTimeout(() => { if (document.getElementById(id)) toast.remove(); }, 3500);
+  }
+
   function addToCart(id, name, price, unit, stock) {
+    if (stock <= 0) {
+      showToast(`<strong>${name}</strong> is out of stock!`, 'danger');
+      return;
+    }
     if (cart[id]) {
-      // Just increment by 1 for quick clicking
       const newQty = cart[id].qty + 1;
       if (newQty <= stock) {
         cart[id].qty = newQty;
       } else {
-        alert('Stock limit reached!');
+        showToast(`Stock limit reached for <strong>${name}</strong>! Only ${stock} ${unit} available.`, 'warning');
       }
     } else {
       cart[id] = { id, name, price, unit, qty: 1, stock };
@@ -161,34 +192,38 @@
     } else if (newItemQty <= cart[id].stock) {
       cart[id].qty = newItemQty;
     } else {
-      alert('Cannot exceed stock!');
+      showToast(`Stock limit reached for <strong>${cart[id].name}</strong>!`, 'warning');
     }
     updateCartUI();
   }
 
-  // Direct Input Change
+  // Direct Input Change — updates totals in real-time as the user types
   function setQty(id, value) {
     if (!cart[id]) return;
 
-    // If empty, set to 0 but keep the input empty visually if possible
-    if (value === "") {
+    // If the field is empty, treat as 0 but don't overwrite the input
+    if (value === "" || value === null || value === undefined) {
       cart[id].qty = 0;
-      calculateTotals();
-      syncHiddenInputs();
-      return;
-    }
-
-    const qty = parseFloat(value);
-
-    if (isNaN(qty) || qty < 0) {
-      cart[id].qty = 0;
-    } else if (qty > cart[id].stock) {
-      cart[id].qty = cart[id].stock;
-      // Optionally alert here or just cap it
     } else {
-      cart[id].qty = qty;
+      const qty = parseFloat(value);
+      if (isNaN(qty) || qty < 0) {
+        cart[id].qty = 0;
+      } else if (qty > cart[id].stock) {
+        cart[id].qty = cart[id].stock;
+        // Cap to stock — also update the visible input so user sees the cap
+        const inp = document.querySelector(`.qty-input[data-id="${id}"]`);
+        if (inp) inp.value = cart[id].stock;
+      } else {
+        cart[id].qty = qty;
+      }
     }
 
+    // Immediately update this item's line total in the DOM
+    const lineTotal = cart[id].qty * cart[id].price;
+    const lineTotalEl = document.querySelector(`.line-total[data-id="${id}"]`);
+    if (lineTotalEl) lineTotalEl.textContent = formatMoney(lineTotal);
+
+    // Recalculate cart subtotal, total, count, and sync hidden form inputs
     calculateTotals();
     syncHiddenInputs();
   }
