@@ -32,18 +32,18 @@
         </div>
 
         <!-- Meta Info -->
-        <div class="receipt-meta border-top border-bottom border-secondary border-dashed py-3 mb-4">
+        <div class="receipt-meta border-top border-bottom border-dark border-dashed py-3 mb-4 text-dark">
           <div class="d-flex justify-content-between mb-1">
             <span class="text-uppercase small fw-bold">Receipt #:</span>
             <span class="font-monospace fw-bold">{{ "%06d"|format(sale.id) }}</span>
           </div>
           <div class="d-flex justify-content-between mb-1">
             <span class="text-uppercase small fw-bold">Date:</span>
-            <span class="font-monospace small">{{ sale.sale_datetime[:16].replace('T', ' ') }}</span>
+            <span class="font-monospace small fw-medium">{{ sale.sale_datetime[:16].replace('T', ' ') }}</span>
           </div>
           <div class="d-flex justify-content-between">
             <span class="text-uppercase small fw-bold">Cashier:</span>
-            <span class="font-monospace small text-uppercase">{{ sale.username }}</span>
+            <span class="font-monospace small text-uppercase fw-medium">{{ sale.username }}</span>
           </div>
         </div>
 
@@ -59,13 +59,13 @@
             </thead>
             <tbody>
               {% for item in items %}
-              <tr class="align-middle">
+              <tr class="align-middle border-bottom border-light">
                 <td class="ps-0 py-2">
-                  <div class="fw-bold">{{ item.name }}</div>
-                  <div class="small text-muted">@ {{ "%.2f"|format(item.unit_price) }}</div>
+                  <div class="fw-bold text-dark">{{ item.name }}</div>
+                  <div class="small fw-medium text-dark">@ {{ "%.2f"|format(item.unit_price) }}</div>
                 </td>
-                <td class="text-center font-monospace">{{ "%.1f"|format(item.quantity) }}</td>
-                <td class="text-end pe-0 font-monospace fw-bold">KES {{ "%.2f"|format(item.line_total) }}</td>
+                <td class="text-center font-monospace fw-bold text-dark">{{ "%.3f"|format(item.quantity) }}</td>
+                <td class="text-end pe-0 font-monospace fw-bold text-dark">KES {{ "%.2f"|format(item.line_total) }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -74,15 +74,15 @@
 
         <!-- Totals Section -->
         <div class="receipt-totals pt-3 border-top border-dark border-2 border-double mb-4">
-          <div class="d-flex justify-content-between mb-2 fs-4 fw-bold">
+          <div class="d-flex justify-content-between mb-2 fs-4 fw-bold text-dark">
             <span class="text-uppercase">Total Amount</span>
             <span class="font-monospace">KES {{ "%.2f"|format(sale.total_amount) }}</span>
           </div>
-          <div class="d-flex justify-content-between text-muted small mb-1">
+          <div class="d-flex justify-content-between text-dark small mb-1">
             <span class="text-uppercase">Payment Method</span>
             <span class="fw-bold">CASH</span>
           </div>
-          <div class="d-flex justify-content-between text-muted small">
+          <div class="d-flex justify-content-between text-dark small">
             <span class="text-uppercase">Items Count</span>
             <span class="fw-bold">{{ items|length }}</span>
           </div>

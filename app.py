@@ -331,7 +331,7 @@ def register_routes(app: Flask) -> None:
             JOIN sales s ON si.sale_id = s.id
             JOIN meat_items m ON si.meat_item_id = m.id
             JOIN categories c ON m.category_id = c.id
-            WHERE s.sale_date >= datetime('now', '-1 day')
+            WHERE s.sale_datetime >= datetime('now', '-1 day')
             GROUP BY m.id
             HAVING sale_count >= 5
             ORDER BY total_qty DESC
