@@ -17,10 +17,21 @@
       <div class="card-body p-4 p-md-5">
         <form method="post" class="needs-validation" novalidate>
           <div class="mb-4">
-            <label class="form-label text-uppercase small text-muted letter-spacing-1 fw-bold">Product Name</label>
+            <label class="form-label text-uppercase small text-muted letter-spacing-1 fw-bold">Category</label>
+            <select class="form-select bg-surface-elevated border-0 text-white" name="category_id" required>
+              <option value="" disabled selected>Select a category</option>
+              {% for cat in categories %}
+              <option value="{{ cat.id }}" {% if item and item.category_id==cat.id %}selected{% endif %}>{{ cat.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label text-uppercase small text-muted letter-spacing-1 fw-bold">Cut/Item Name</label>
             <input type="text" class="form-control form-control-lg bg-surface-elevated border-0 text-white" name="name"
-              required placeholder="e.g. Beef Steak" value="{{ item.name if item else '' }}">
-            <div class="invalid-feedback">Please provide a product name.</div>
+              required placeholder="e.g. Ribs" value="{{ item.name if item else '' }}">
+            <div class="invalid-feedback">Please provide a name.</div>
           </div>
 
           <div class="row g-4 mb-4">

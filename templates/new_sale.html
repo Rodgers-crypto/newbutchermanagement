@@ -5,29 +5,39 @@
 <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;" id="toastContainer"></div>
 
 <div class="row g-3 h-100">
-  <!-- Left: Product Grid (Compact) -->
+  <!-- Left: Product Grid & Categories -->
   <div class="col-lg-8 d-flex flex-column h-100">
     <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-      <h5 class="fw-bold mb-0 text-white">Products</h5>
+      <h5 class="fw-bold mb-0 text-white">Categories & Cuts</h5>
       <div class="w-50">
         <div class="input-group input-group-sm">
           <span class="input-group-text bg-surface border-secondary text-muted"><i
               class="fa-solid fa-search"></i></span>
           <input type="text" id="productSearch"
-            class="form-control form-control-sm bg-surface text-white border-secondary"
-            placeholder="Search products...">
+            class="form-control form-control-sm bg-surface text-white border-secondary" placeholder="Search cuts...">
         </div>
       </div>
     </div>
 
+    <!-- Category Tabs -->
+    <div class="mb-3 overflow-auto d-flex gap-2 pb-2" id="categoryTabs">
+      <button class="btn btn-sm btn-outline-danger filter-btn active" data-category="all">All</button>
+      {% for cat in categories %}
+      <button class="btn btn-sm btn-outline-secondary filter-btn text-white border-secondary"
+        data-category="{{ cat.name|lower }}">{{ cat.name }}</button>
+      {% endfor %}
+    </div>
+
     <div class="bg-surface border border-secondary rounded flex-grow-1 overflow-hidden d-flex flex-column shadow-sm">
-      <div class="overflow-auto p-2" style="max-height: calc(100vh - 160px);">
+      <div class="overflow-auto p-2" style="max-height: calc(100vh - 220px);">
         <div class="row g-2" id="productGrid">
           {% for item in meat_items %}
-          <div class="col-6 col-md-4 col-xl-3 product-item" data-name="{{ item.name|lower }}">
+          <div class="col-6 col-md-4 col-xl-3 product-item" data-name="{{ item.name|lower }}"
+            data-category="{{ item.category_name|lower }}">
             <div class="card h-100 product-card cursor-pointer border-secondary shadow-sm bg-surface-hover"
               onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price_per_unit }}, '{{ item.unit }}', {{ item.stock_quantity }})">
               <div class="card-body p-2 text-center d-flex flex-column justify-content-center">
+                <div class="small text-muted mb-1">{{ item.category_name }}</div>
                 <h6 class="fw-bold mb-1 text-truncate small text-white">{{ item.name }}</h6>
                 <div class="text-danger fw-bold small">KES {{ "%.2f"|format(item.price_per_unit) }}<span
                     class="text-muted fw-normal">/{{ item.unit }}</span></div>
@@ -39,7 +49,7 @@
           {% endfor %}
         </div>
         <div id="noResults" class="text-center py-5 d-none">
-          <p class="text-muted small">No products found.</p>
+          <p class="text-muted small">No cuts found.</p>
         </div>
       </div>
     </div>
@@ -59,13 +69,18 @@
         <div class="text-center py-5 text-muted empty-cart-msg">
           <i class="fa-solid fa-basket-shopping fa-3x mb-3 opacity-25"></i>
           <p class="small mb-0">Cart is empty</p>
-          <p class="small opacity-50">Click products to add</p>
+          <p class="small opacity-50">Select category & cut to add</p>
         </div>
       </div>
 
       <div class="p-3 border-top border-secondary bg-surface">
         <form method="post" id="checkoutForm">
-          <input type="hidden" name="customer_name" value="Walk-in Customer">
+          <input type="hidden" name="customer_name" id="customer_name_input" value="Walk-in Customer">
+          <div class="mb-2">
+            <input type="text" class="form-control form-control-sm bg-black text-white border-secondary"
+              placeholder="Customer Name (Optional)"
+              oninput="document.getElementById('customer_name_input').value = this.value">
+          </div>
           <div id="formInputs"></div>
 
           <div class="d-flex justify-content-between mb-1 small text-muted">
@@ -91,20 +106,21 @@
 </div>
 
 <style>
-  /* Custom Styles for Input Number */
-  .qty-input {
+  .qty-input,
+  .price-input {
     background-color: #000 !important;
     border: 1px solid #333 !important;
     color: #fff !important;
-    text-align: center;
-    padding: 2px;
-    font-size: 0.9rem;
-    width: 60px;
-    -moz-appearance: textfield;
+    text-align: right;
+    padding: 2px 5px;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
   }
 
   .qty-input::-webkit-outer-spin-button,
-  .qty-input::-webkit-inner-spin-button {
+  .qty-input::-webkit-inner-spin-button,
+  .price-input::-webkit-outer-spin-button,
+  .price-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
@@ -130,6 +146,20 @@
 
   .border-secondary {
     border-color: #3f3f46 !important;
+  }
+
+  .filter-btn.active {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white !important;
+  }
+
+  .cart-item {
+    transition: all 0.2s;
+  }
+
+  .cart-item:hover {
+    background-color: #27272a !important;
   }
 </style>
 
@@ -175,7 +205,7 @@
       if (newQty <= stock) {
         cart[id].qty = newQty;
       } else {
-        showToast(`Stock limit reached for <strong>${name}</strong>! Only ${stock} ${unit} available.`, 'warning');
+        showToast(`Stock limit reached for <strong>${name}</strong>!`, 'warning');
       }
     } else {
       cart[id] = { id, name, price, unit, qty: 1, stock };
@@ -183,49 +213,61 @@
     updateCartUI();
   }
 
-  // Update via Buttons (+ / -)
-  function updateQty(id, delta) {
-    if (!cart[id]) return;
-    const newItemQty = cart[id].qty + delta;
-    if (newItemQty <= 0) {
-      if (confirm("Remove item from cart?")) delete cart[id];
-    } else if (newItemQty <= cart[id].stock) {
-      cart[id].qty = newItemQty;
-    } else {
-      showToast(`Stock limit reached for <strong>${cart[id].name}</strong>!`, 'warning');
-    }
-    updateCartUI();
-  }
-
-  // Direct Input Change — updates totals in real-time as the user types
   function setQty(id, value) {
     if (!cart[id]) return;
-
-    // If the field is empty, treat as 0 but don't overwrite the input
-    if (value === "" || value === null || value === undefined) {
-      cart[id].qty = 0;
+    const qty = parseFloat(value) || 0;
+    if (qty > cart[id].stock) {
+      cart[id].qty = cart[id].stock;
+      showToast(`Capped to stock limit for <strong>${cart[id].name}</strong>`, 'info');
     } else {
-      const qty = parseFloat(value);
-      if (isNaN(qty) || qty < 0) {
-        cart[id].qty = 0;
-      } else if (qty > cart[id].stock) {
-        cart[id].qty = cart[id].stock;
-        // Cap to stock — also update the visible input so user sees the cap
-        const inp = document.querySelector(`.qty-input[data-id="${id}"]`);
-        if (inp) inp.value = cart[id].stock;
-      } else {
-        cart[id].qty = qty;
-      }
+      cart[id].qty = qty;
     }
+    syncRow(id, 'qty');
+  }
 
-    // Immediately update this item's line total in the DOM
-    const lineTotal = cart[id].qty * cart[id].price;
+  function setTotalPrice(id, value) {
+    if (!cart[id]) return;
+    const totalPrice = parseFloat(value) || 0;
+    const calculatedQty = totalPrice / cart[id].price;
+
+    if (calculatedQty > cart[id].stock) {
+      cart[id].qty = cart[id].stock;
+      showToast(`Capped to stock limit for <strong>${cart[id].name}</strong>`, 'info');
+    } else {
+      cart[id].qty = calculatedQty;
+    }
+    syncRow(id, 'price');
+  }
+
+  function syncRow(id, source) {
+    const item = cart[id];
+    const totalLinePrice = item.qty * item.price;
+
+    // Update inputs in the row if they exist
+    const qtyInput = document.querySelector(`.qty-input[data-id="${id}"]`);
+    const priceInput = document.querySelector(`.price-input[data-id="${id}"]`);
     const lineTotalEl = document.querySelector(`.line-total[data-id="${id}"]`);
-    if (lineTotalEl) lineTotalEl.textContent = formatMoney(lineTotal);
 
-    // Recalculate cart subtotal, total, count, and sync hidden form inputs
+    if (source !== 'qty' && qtyInput) {
+      qtyInput.value = item.unit === 'pcs' ? item.qty : item.qty.toFixed(3);
+    }
+    if (source !== 'price' && priceInput) priceInput.value = totalLinePrice.toFixed(2);
+    if (lineTotalEl) lineTotalEl.textContent = formatMoney(totalLinePrice);
+
     calculateTotals();
     syncHiddenInputs();
+  }
+
+  function updateQty(id, delta) {
+    if (!cart[id]) return;
+    const newQty = cart[id].qty + delta;
+    if (newQty <= 0) {
+      delete cart[id];
+      updateCartUI();
+    } else if (newQty <= cart[id].stock) {
+      cart[id].qty = newQty;
+      syncRow(id, 'btn');
+    }
   }
 
   function calculateTotals() {
@@ -234,8 +276,6 @@
     Object.values(cart).forEach(item => {
       total += item.qty * item.price;
       if (item.qty > 0) count++;
-      const lineTotalEl = document.querySelector(`.line-total[data-id="${item.id}"]`);
-      if (lineTotalEl) lineTotalEl.textContent = formatMoney(item.qty * item.price);
     });
     document.getElementById('cartSubtotal').textContent = formatMoney(total);
     document.getElementById('cartTotal').textContent = 'KES ' + formatMoney(total);
@@ -265,55 +305,90 @@
 
   function updateCartUI() {
     const container = document.getElementById('cartItems');
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    const activeId = document.activeElement && document.activeElement.classList.contains('qty-input') ? document.activeElement.dataset.id : null;
     container.innerHTML = '';
     const items = Object.values(cart);
     if (items.length === 0) {
       container.innerHTML = `<div class="text-center py-5 text-muted empty-cart-msg"><i class="fa-solid fa-basket-shopping fa-3x mb-3 opacity-25"></i><p class="small mb-0">Cart is empty</p></div>`;
     } else {
       items.forEach(item => {
-        const lineTotal = item.qty * item.price;
+        const totalLinePrice = item.qty * item.price;
         const div = document.createElement('div');
-        div.className = 'd-flex justify-content-between align-items-center p-3 border-bottom border-dark bg-surface';
+        div.className = 'cart-item border-bottom border-secondary bg-surface p-2';
         div.innerHTML = `
-                <div class="flex-grow-1 pe-2" style="min-width: 0;">
-                    <div class="fw-bold text-white text-truncate">${item.name}</div>
-                    <div class="text-muted small">@ ${formatMoney(item.price)}/${item.unit}</div>
-                </div>
-                <div class="d-flex align-items-center gap-1 bg-black rounded border border-secondary p-1">
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, -1)"><i class="fa-solid fa-minus fa-xs"></i></button>
-                    <input type="number" 
-                        class="form-control form-control-sm qty-input border-0 shadow-none text-white text-center" 
-                        value="${item.qty > 0 ? item.qty : ''}" 
-                        placeholder="Enter ${item.unit}"
-                        step="0.01" 
-                        min="0" 
-                        data-id="${item.id}" 
-                        oninput="setQty(${item.id}, this.value)" 
-                        onblur="updateCartUI()"
-                        style="width: 85px; background: transparent;">
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 px-2 text-decoration-none" onclick="updateQty(${item.id}, 1)"><i class="fa-solid fa-plus fa-xs"></i></button>
-                </div>
-                <div class="fw-bold ms-3 text-end font-monospace text-white line-total" data-id="${item.id}" style="min-width: 70px;">${formatMoney(lineTotal)}</div>`;
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="flex-grow-1 pe-2">
+              <div class="fw-bold text-white small text-truncate">${item.name}</div>
+              <div class="text-muted" style="font-size: 0.7rem;">@ ${formatMoney(item.price)}/${item.unit}</div>
+            </div>
+            <button type="button" class="btn btn-sm text-danger p-0" onclick="updateQty(${item.id}, -100000)"><i class="fa-solid fa-times"></i></button>
+          </div>
+          <div class="row g-1 align-items-center">
+            <!-- Price Input (Front and Center for Campus/Market context) -->
+            <div class="col-6">
+              <div class="text-uppercase" style="font-size: 0.6rem; color: #71717a; margin-bottom: 2px;">Enter Amount (KSH)</div>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text p-1 bg-black text-muted border-secondary shadow-none" style="font-size: 0.7rem; min-width: 35px;">KES</span>
+                <input type="number" class="form-control price-input fw-bold" value="${totalLinePrice.toFixed(2)}" step="0.01" data-id="${item.id}" oninput="setTotalPrice(${item.id}, this.value)" style="font-size: 1rem; color: #ef4444 !important;">
+              </div>
+              <div class="d-flex gap-1 mt-1 flex-wrap">
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted quick-access" onclick="setTotalPrice(${item.id}, 20)" style="font-size: 0.6rem;">20</button>
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted quick-access" onclick="setTotalPrice(${item.id}, 30)" style="font-size: 0.6rem;">30</button>
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted quick-access" onclick="setTotalPrice(${item.id}, 50)" style="font-size: 0.6rem;">50</button>
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted quick-access" onclick="setTotalPrice(${item.id}, 100)" style="font-size: 0.6rem;">100</button>
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted quick-access" onclick="setTotalPrice(${item.id}, 200)" style="font-size: 0.6rem;">200</button>
+              </div>
+            </div>
+            
+            <div class="col-1 text-center text-muted small mt-3">→</div>
+
+            <!-- KG Display (Automatic result) -->
+            <div class="col-5">
+              <div class="text-uppercase" style="font-size: 0.6rem; color: #71717a; margin-bottom: 2px;">Weight Served</div>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control qty-input text-muted" value="${item.unit === 'pcs' ? item.qty : item.qty.toFixed(3)}" step="0.001" data-id="${item.id}" oninput="setQty(${item.id}, this.value)" style="background: transparent !important; border-bottom: 1px dashed #3f3f46 !important; font-family: monospace;">
+                <span class="input-group-text p-1 bg-black text-muted border-secondary border-0" style="font-size: 0.6rem;">${item.unit}</span>
+              </div>
+              <div class="d-flex gap-1 mt-1">
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted" onclick="setQty(${item.id}, 0.25)" style="font-size: 0.6rem;">1/4</button>
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted" onclick="setQty(${item.id}, 0.5)" style="font-size: 0.6rem;">1/2</button>
+                <button type="button" class="btn btn-dark btn-xs p-0 px-1 border-secondary text-muted" onclick="setQty(${item.id}, 1)" style="font-size: 0.6rem;">1kg</button>
+              </div>
+            </div>
+          </div>
+        `;
         container.appendChild(div);
       });
     }
     calculateTotals();
     syncHiddenInputs();
-    if (activeId) {
-      const newInput = container.querySelector(`.qty-input[data-id="${activeId}"]`);
-      if (newInput) newInput.focus();
-    }
   }
 
-  // Product Search
-  document.getElementById('productSearch').addEventListener('input', function (e) {
-    const term = e.target.value.toLowerCase();
+  // Filtering Logic
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'btn-danger'));
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.add('btn-outline-secondary', 'border-secondary'));
+
+      this.classList.remove('btn-outline-secondary', 'border-secondary');
+      this.classList.add('active', 'btn-danger');
+
+      const cat = this.dataset.category;
+      filterProducts(cat, document.getElementById('productSearch').value.toLowerCase());
+    });
+  });
+
+  document.getElementById('productSearch').addEventListener('input', function () {
+    const activeCat = document.querySelector('.filter-btn.active').dataset.category;
+    filterProducts(activeCat, this.value.toLowerCase());
+  });
+
+  function filterProducts(category, term) {
     const items = document.querySelectorAll('.product-item');
     let hasResults = false;
     items.forEach(item => {
-      if (item.dataset.name.includes(term)) {
+      const matchCat = category === 'all' || item.dataset.category === category;
+      const matchTerm = item.dataset.name.includes(term);
+      if (matchCat && matchTerm) {
         item.classList.remove('d-none');
         hasResults = true;
       } else {
@@ -321,6 +396,6 @@
       }
     });
     document.getElementById('noResults').classList.toggle('d-none', hasResults);
-  });
+  }
 </script>
 {% endblock %}

@@ -66,15 +66,27 @@ def init_db():
         """
     )
 
-    # Meat inventory
+    # Categories table
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        )
+        """
+    )
+
+    # Meat inventory (now with category link)
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS meat_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_id INTEGER,
             name TEXT NOT NULL,
             unit TEXT NOT NULL DEFAULT 'kg',
             price_per_unit REAL NOT NULL DEFAULT 0,
-            stock_quantity REAL NOT NULL DEFAULT 0
+            stock_quantity REAL NOT NULL DEFAULT 0,
+            FOREIGN KEY(category_id) REFERENCES categories(id)
         )
         """
     )
@@ -139,23 +151,59 @@ def ensure_default_admin():
 
 
 def ensure_sample_data():
-    """Seed some sample meat items if inventory is empty."""
+    """Seed categories and sample meat items if empty."""
     conn = get_db()
     cur = conn.cursor()
+    
+    # Seed categories
+    cur.execute("SELECT COUNT(*) AS c FROM categories")
+    if cur.fetchone()["c"] == 0:
+        cur.executemany(
+            "INSERT INTO categories (name) VALUES (?)",
+            [("Beef",), ("Chicken",), ("Pork",), ("Goat (Mbuzi)",), ("Lamb",), ("Offal/Others",)]
+        )
+        conn.commit()
+
+    # Seed meat items (cuts)
     cur.execute("SELECT COUNT(*) AS c FROM meat_items")
     count = cur.fetchone()["c"]
     if count == 0:
+        # Get category IDs
+        cur.execute("SELECT id, name FROM categories")
+        cat_map = {row["name"]: row["id"] for row in cur.fetchall()}
+        
+        sample_cuts = [
+            # Beef
+            (cat_map["Beef"], "Beef with Bone", "kg", 600.0, 50),
+            (cat_map["Beef"], "Beef Steak", "kg", 750.0, 30),
+            (cat_map["Beef"], "Minced Beef", "kg", 800.0, 25),
+            (cat_map["Beef"], "Beef Liver", "kg", 750.0, 15),
+            (cat_map["Beef"], "Beef Tripe (Matumbo)", "kg", 450.0, 40),
+            # Chicken
+            (cat_map["Chicken"], "Full Broiler Chicken", "pcs", 600.0, 20),
+            (cat_map["Chicken"], "Chicken Breast", "kg", 700.0, 40),
+            (cat_map["Chicken"], "Chicken Wings", "kg", 550.0, 30),
+            # Pork
+            (cat_map["Pork"], "Pork Chops", "kg", 650.0, 35),
+            (cat_map["Pork"], "Pork Belly", "kg", 700.0, 25),
+            # Goat
+            (cat_map["Goat (Mbuzi)"], "Goat Shoulder", "kg", 850.0, 30),
+            (cat_map["Goat (Mbuzi)"], "Goat Leg", "kg", 900.0, 25),
+            (cat_map["Goat (Mbuzi)"], "Goat Ribs", "kg", 850.0, 35),
+            # Lamb
+            (cat_map["Lamb"], "Lamb Chops", "kg", 1100.0, 20),
+            # Others
+            (cat_map["Offal/Others"], "Oxtail", "kg", 700.0, 10),
+            (cat_map["Offal/Others"], "Supu Bones", "kg", 150.0, 20),
+            (cat_map["Offal/Others"], "Dog Meat (Bones/Fat)", "kg", 200.0, 30),
+        ]
+        
         cur.executemany(
             """
-            INSERT INTO meat_items (name, unit, price_per_unit, stock_quantity)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO meat_items (category_id, name, unit, price_per_unit, stock_quantity)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            [
-                ("Beef", "kg", 12.5, 50),
-                ("Chicken", "kg", 6.0, 80),
-                ("Pork", "kg", 9.0, 60),
-                ("Goat", "kg", 11.0, 40),
-            ],
+            sample_cuts,
         )
         conn.commit()
     conn.close()
@@ -275,12 +323,26 @@ def register_routes(app: Flask) -> None:
         )
         low_stock_items = cur.fetchall()
 
+        # Top sold cuts
+        cur.execute(
+            """
+            SELECT m.name, SUM(si.quantity) as total_qty, COUNT(si.id) as sale_count
+            FROM sale_items si
+            JOIN meat_items m ON si.meat_item_id = m.id
+            GROUP BY m.id
+            ORDER BY total_qty DESC
+            LIMIT 5
+            """
+        )
+        top_sold_cuts = cur.fetchall()
+
         conn.close()
 
         return render_template(
             "dashboard.html",
             total_sales=total_sales,
             low_stock_items=low_stock_items,
+            top_sold_cuts=top_sold_cuts,
         )
 
     @app.route("/inventory")
@@ -289,7 +351,12 @@ def register_routes(app: Flask) -> None:
     def inventory_list():
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM meat_items ORDER BY name ASC")
+        cur.execute("""
+            SELECT m.*, c.name AS category_name 
+            FROM meat_items m
+            LEFT JOIN categories c ON m.category_id = c.id
+            ORDER BY c.name, m.name ASC
+        """)
         items = cur.fetchall()
         conn.close()
         return render_template("inventory.html", items=items)
@@ -298,7 +365,13 @@ def register_routes(app: Flask) -> None:
     @login_required
     @admin_required
     def inventory_add():
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM categories ORDER BY name ASC")
+        categories = cur.fetchall()
+
         if request.method == "POST":
+            category_id = request.form.get("category_id")
             name = request.form.get("name", "").strip()
             unit = request.form.get("unit", "kg").strip() or "kg"
             price_per_unit = request.form.get("price_per_unit", "0").strip()
@@ -313,27 +386,26 @@ def register_routes(app: Flask) -> None:
             except ValueError:
                 error = "Price and quantity must be numeric."
 
-            if not name:
-                error = "Meat name is required."
+            if not name or not category_id:
+                error = "Category and name are required."
 
             if error:
                 flash(error, "danger")
             else:
-                conn = get_db()
-                cur = conn.cursor()
                 cur.execute(
                     """
-                    INSERT INTO meat_items (name, unit, price_per_unit, stock_quantity)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO meat_items (category_id, name, unit, price_per_unit, stock_quantity)
+                    VALUES (?, ?, ?, ?, ?)
                     """,
-                    (name, unit, price_val, qty_val),
+                    (category_id, name, unit, price_val, qty_val),
                 )
                 conn.commit()
                 conn.close()
                 flash("Meat item added.", "success")
                 return redirect(url_for("inventory_list"))
 
-        return render_template("inventory_form.html", item=None)
+        conn.close()
+        return render_template("inventory_form.html", item=None, categories=categories)
 
     @app.route("/inventory/<int:item_id>/edit", methods=["GET", "POST"])
     @login_required
@@ -349,7 +421,12 @@ def register_routes(app: Flask) -> None:
             flash("Item not found.", "danger")
             return redirect(url_for("inventory_list"))
 
+        # Fetch categories for the form
+        cur.execute("SELECT * FROM categories ORDER BY name ASC")
+        categories = cur.fetchall()
+
         if request.method == "POST":
+            category_id = request.form.get("category_id")
             name = request.form.get("name", "").strip()
             unit = request.form.get("unit", "kg").strip() or "kg"
             price_per_unit = request.form.get("price_per_unit", "0").strip()
@@ -364,8 +441,8 @@ def register_routes(app: Flask) -> None:
             except ValueError:
                 error = "Price and quantity must be numeric."
 
-            if not name:
-                error = "Meat name is required."
+            if not name or not category_id:
+                error = "Category and name are required."
 
             if error:
                 flash(error, "danger")
@@ -373,10 +450,10 @@ def register_routes(app: Flask) -> None:
                 cur.execute(
                     """
                     UPDATE meat_items
-                    SET name = ?, unit = ?, price_per_unit = ?, stock_quantity = ?
+                    SET category_id = ?, name = ?, unit = ?, price_per_unit = ?, stock_quantity = ?
                     WHERE id = ?
                     """,
-                    (name, unit, price_val, qty_val, item_id),
+                    (category_id, name, unit, price_val, qty_val, item_id),
                 )
                 conn.commit()
                 conn.close()
@@ -384,7 +461,7 @@ def register_routes(app: Flask) -> None:
                 return redirect(url_for("inventory_list"))
 
         conn.close()
-        return render_template("inventory_form.html", item=item)
+        return render_template("inventory_form.html", item=item, categories=categories)
 
     @app.route("/inventory/<int:item_id>/delete", methods=["POST"])
     @login_required
@@ -412,7 +489,17 @@ def register_routes(app: Flask) -> None:
         conn = get_db()
         cur = conn.cursor()
         
-        cur.execute("SELECT * FROM meat_items ORDER BY name ASC")
+        # Fetch categories
+        cur.execute("SELECT * FROM categories ORDER BY name ASC")
+        categories = cur.fetchall()
+
+        # Fetch all meat items with category name
+        cur.execute("""
+            SELECT m.*, c.name AS category_name 
+            FROM meat_items m
+            LEFT JOIN categories c ON m.category_id = c.id
+            ORDER BY c.name, m.name
+        """)
         meat_items = cur.fetchall()
 
         if request.method == "POST":
@@ -475,7 +562,7 @@ def register_routes(app: Flask) -> None:
                 conn.close()
                 flash(error, "danger")
                 return render_template(
-                    "new_sale.html", meat_items=meat_items, customer_name=customer_name
+                    "new_sale.html", meat_items=meat_items, categories=categories, customer_name=customer_name
                 )
 
             try:
@@ -523,10 +610,10 @@ def register_routes(app: Flask) -> None:
                 conn.rollback()
                 conn.close()
                 flash(f"An error occurred: {str(e)}", "danger")
-                return render_template("new_sale.html", meat_items=meat_items)
+                return render_template("new_sale.html", meat_items=meat_items, categories=categories)
 
         conn.close()
-        return render_template("new_sale.html", meat_items=meat_items)
+        return render_template("new_sale.html", meat_items=meat_items, categories=categories)
 
     @app.route("/sales/<int:sale_id>/receipt")
     @login_required
