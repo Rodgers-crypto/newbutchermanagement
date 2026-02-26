@@ -155,7 +155,7 @@ def ensure_sample_data():
     conn = get_db()
     cur = conn.cursor()
     
-    # Seed categories
+    # Seed categories (if empty)
     cur.execute("SELECT COUNT(*) AS c FROM categories")
     if cur.fetchone()["c"] == 0:
         cur.executemany(
@@ -164,11 +164,11 @@ def ensure_sample_data():
         )
         conn.commit()
 
-    # Seed meat items (cuts)
+    # Seed meat items (cuts) (if empty)
     cur.execute("SELECT COUNT(*) AS c FROM meat_items")
     count = cur.fetchone()["c"]
     if count == 0:
-        # Get category IDs
+        # Get category IDs for sample cuts
         cur.execute("SELECT id, name FROM categories")
         cat_map = {row["name"]: row["id"] for row in cur.fetchall()}
         
@@ -323,13 +323,17 @@ def register_routes(app: Flask) -> None:
         )
         low_stock_items = cur.fetchall()
 
-        # Top sold cuts
+        # Top 5 sold cuts (Last 24 hours, min 5 sales threshold)
         cur.execute(
             """
-            SELECT m.name, SUM(si.quantity) as total_qty, COUNT(si.id) as sale_count
+            SELECT m.name, c.name as category_name, SUM(si.quantity) as total_qty, COUNT(si.id) as sale_count
             FROM sale_items si
+            JOIN sales s ON si.sale_id = s.id
             JOIN meat_items m ON si.meat_item_id = m.id
+            JOIN categories c ON m.category_id = c.id
+            WHERE s.sale_date >= datetime('now', '-1 day')
             GROUP BY m.id
+            HAVING sale_count >= 5
             ORDER BY total_qty DESC
             LIMIT 5
             """

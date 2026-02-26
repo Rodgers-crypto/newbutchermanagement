@@ -117,7 +117,13 @@
         <i class="fa-solid fa-chart-line text-info"></i>
         <span class="fw-bold text-white">Top Sold Cuts (Business Intelligence)</span>
       </div>
-      <span class="badge bg-info text-dark rounded-pill">Top 5</span>
+      <span class="badge bg-info text-dark rounded-pill">Top 5 (Last 24hrs)</span>
+    </div>
+    <div class="card-body p-0 border-top border-secondary">
+      <div class="px-3 py-2 bg-dark-subtle small text-muted">
+        <i class="fa-solid fa-info-circle me-1"></i> Showing cuts with at least <strong>5 sales</strong> in the past 24
+        hours.
+      </div>
     </div>
     <div class="table-responsive">
       {% if top_sold_cuts %}
@@ -125,8 +131,9 @@
         <thead class="bg-surface text-uppercase text-muted small">
           <tr>
             <th class="ps-3 border-bottom border-secondary fw-bold">Cut Name</th>
-            <th class="text-end border-bottom border-secondary fw-bold">Total Sold</th>
-            <th class="text-end pe-3 border-bottom border-secondary fw-bold">Frequency</th>
+            <th class="border-bottom border-secondary fw-bold text-center">Category</th>
+            <th class="text-end border-bottom border-secondary fw-bold">Total Sold (KG/Pcs)</th>
+            <th class="text-end pe-3 border-bottom border-secondary fw-bold">Orders</th>
           </tr>
         </thead>
         <tbody>
@@ -135,6 +142,10 @@
             <td class="ps-3 fw-medium text-white border-bottom border-secondary">
               <i class="fa-solid fa-medal text-warning fa-xs me-2"></i>
               {{ cut.name }}
+            </td>
+            <td class="text-center border-bottom border-secondary">
+              <span class="badge bg-outline-info border border-info-subtle text-info small"
+                style="font-size: 0.6rem;">{{ cut.category_name }}</span>
             </td>
             <td class="text-end font-monospace text-info border-bottom border-secondary">
               {{ "%.2f"|format(cut.total_qty) }}
