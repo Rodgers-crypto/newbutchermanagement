@@ -34,15 +34,23 @@
           {% for item in meat_items %}
           <div class="col-6 col-md-4 col-xl-3 product-item" data-name="{{ item.name|lower }}"
             data-category="{{ item.category_name|lower }}">
-            <div class="card h-100 product-card cursor-pointer border-secondary shadow-sm bg-surface-hover"
-              onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price_per_unit }}, '{{ item.unit }}', {{ item.stock_quantity }})">
-              <div class="card-body p-2 text-center d-flex flex-column justify-content-center">
+            <div class="card h-100 product-card cursor-pointer border-secondary shadow-sm bg-surface-hover {{ 'opacity-50 grayscale' if item.stock_quantity <= 0 else '' }}"
+              {% if item.stock_quantity > 0 %}
+                onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price_per_unit }}, '{{ item.unit }}', {{ item.stock_quantity }})"
+              {% endif %}>
+              <div class="card-body p-2 text-center d-flex flex-column justify-content-center position-relative">
+                {% if item.stock_quantity <= 0 %}
+                <div class="position-absolute top-50 start-50 translate-middle z-3">
+                  <span class="badge bg-danger text-uppercase fw-bold" style="font-size: 0.6rem; transform: rotate(-15deg);">Out of Stock</span>
+                </div>
+                {% endif %}
                 <div class="small text-muted mb-1">{{ item.category_name }}</div>
                 <h6 class="fw-bold mb-1 text-truncate small text-white">{{ item.name }}</h6>
                 <div class="text-danger fw-bold small">KES {{ "%.2f"|format(item.price_per_unit) }}<span
                     class="text-muted fw-normal">/{{ item.unit }}</span></div>
-                <div class="text-muted small" style="font-size: 0.75rem;">Stock: {{ "%.1f"|format(item.stock_quantity)
-                  }}</div>
+                <div class="text-muted small" style="font-size: 0.75rem;">
+                  Stock: {{ "%.1f"|format(item.stock_quantity) }}
+                </div>
               </div>
             </div>
           </div>
@@ -144,6 +152,11 @@
     letter-spacing: -0.5px;
   }
 
+  .grayscale {
+    filter: grayscale(1);
+    pointer-events: none;
+  }
+
   .border-secondary {
     border-color: #3f3f46 !important;
   }
@@ -205,10 +218,16 @@
       if (newQty <= stock) {
         cart[id].qty = newQty;
       } else {
+        cart[id].qty = stock;
         showToast(`Stock limit reached for <strong>${name}</strong>!`, 'warning');
       }
     } else {
-      cart[id] = { id, name, price, unit, qty: 1, stock };
+      // Set initial qty to 1 or max stock available if stock < 1
+      const initialQty = Math.min(1, stock);
+      cart[id] = { id, name, price, unit, qty: initialQty, stock };
+      if (initialQty < 1) {
+        showToast(`Started at max available stock (${initialQty.toFixed(2)})`, 'info');
+      }
     }
     updateCartUI();
   }

@@ -673,8 +673,15 @@ def register_routes(app: Flask) -> None:
                         error = "Invalid meat item."
                         break
 
-                    if qty_val > item_row["stock_quantity"]:
-                        error = f"Not enough stock for {item_row['name']}."
+                    # Strict stock check
+                    current_stock = item_row["stock_quantity"]
+                    if current_stock <= 0:
+                        error = f"Item {item_row['name']} is out of stock."
+                        break
+
+                    # Use a small epsilon for floating point comparison (e.g., 0.0001)
+                    if qty_val > current_stock + 0.0001:
+                        error = f"Not enough stock for {item_row['name']} (Requested: {qty_val}, Available: {current_stock})."
                         break
 
                     line_total = qty_val * price_val
