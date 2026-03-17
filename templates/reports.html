@@ -54,7 +54,7 @@
       <div class="card-body">
         {% if summary_rows %}
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover table-adaptive align-middle mb-0">
             <thead class="text-muted text-uppercase small letter-spacing-1">
               <tr>
                 <th class="border-0">Date</th>
@@ -65,9 +65,9 @@
             <tbody>
               {% for row in summary_rows %}
               <tr>
-                <td class="fw-medium text-white">{{ row['sale_date'] }}</td>
-                <td class="text-end text-muted">{{ row['num_sales'] }}</td>
-                <td class="text-end fw-bold text-white">KES {{ "%.2f"|format(row['total_sales']) }}</td>
+                <td class="fw-medium text-white" data-label="Date">{{ row['sale_date'] }}</td>
+                <td class="text-end text-muted" data-label="Transactions">{{ row['num_sales'] }}</td>
+                <td class="text-end fw-bold text-white" data-label="Revenue">KES {{ "%.2f"|format(row['total_sales']) }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -91,7 +91,7 @@
       <div class="card-body">
         {% if by_item_rows %}
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover table-adaptive align-middle mb-0">
             <thead class="text-muted text-uppercase small letter-spacing-1">
               <tr>
                 <th class="border-0">Product</th>
@@ -102,7 +102,7 @@
             <tbody>
               {% for row in by_item_rows %}
               <tr>
-                <td class="d-flex align-items-center gap-2 text-white">
+                <td class="d-flex align-items-center gap-2 text-white" data-label="Product">
                   <div
                     class="avatar bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center"
                     style="width: 28px; height: 28px;">
@@ -110,8 +110,8 @@
                   </div>
                   {{ row['name'] }}
                 </td>
-                <td class="text-end text-muted">{{ "%.1f"|format(row['total_qty']) }}</td>
-                <td class="text-end fw-bold text-white">KES {{ "%.2f"|format(row['total_amount']) }}</td>
+                <td class="text-end text-muted" data-label="Qty Sold">{{ "%.1f"|format(row['total_qty']) }}</td>
+                <td class="text-end fw-bold text-white" data-label="Total">KES {{ "%.2f"|format(row['total_amount']) }}</td>
               </tr>
               {% endfor %}
             </tbody>

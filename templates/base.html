@@ -196,6 +196,12 @@
                 <i class="fa-solid fa-boxes-stacked fa-faint me-2"></i> Inventory
               </a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link {{ 'active' if 'users' in request.endpoint else '' }}"
+                href="{{ url_for('users_list') }}">
+                <i class="fa-solid fa-users fa-faint me-2"></i> Users
+              </a>
+            </li>
             {% endif %}
           </ul>
 

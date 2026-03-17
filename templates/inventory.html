@@ -19,7 +19,7 @@
 <div class="card border-0 bg-surface shadow-sm">
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover table-adaptive align-middle mb-0">
         <thead class="bg-surface-secondary text-uppercase text-white small letter-spacing-1">
           <tr>
             <th class="ps-4 border-0 py-3">Category</th>
@@ -33,11 +33,11 @@
         <tbody class="border-top-0">
           {% for item in items %}
           <tr>
-            <td class="ps-4">
+            <td class="ps-4" data-label="Category">
               <span class="badge bg-outline-secondary border border-secondary text-muted">{{ item.category_name
                 }}</span>
             </td>
-            <td class="ps-4">
+            <td class="ps-4" data-label="Product">
               <div class="d-flex align-items-center gap-3">
                 <div class="avatar bg-danger-subtle text-danger rounded p-2">
                   <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -48,11 +48,11 @@
                 <span class="fw-medium text-white">{{ item.name }}</span>
               </div>
             </td>
-            <td class="text-center">
+            <td class="text-center" data-label="Unit">
               <span class="badge bg-secondary-subtle px-2">{{ item.unit }}</span>
             </td>
-            <td class="text-end fw-bold text-success-subtle">KES {{ "%.2f"|format(item.price_per_unit) }}</td>
-            <td class="text-end">
+            <td class="text-end fw-bold text-success-subtle" data-label="Price">KES {{ "%.2f"|format(item.price_per_unit) }}</td>
+            <td class="text-end" data-label="Stock">
               {% if item.stock_quantity <= 5 %} <span
                 class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 gap-1 d-inline-flex align-items-center">
                 <span class="msg-dot bg-danger"></span>
@@ -62,7 +62,7 @@
                 <span class="fw-medium text-muted">{{ "%.1f"|format(item.stock_quantity) }}</span>
                 {% endif %}
             </td>
-            <td class="text-end pe-4">
+            <td class="text-end pe-4" data-label="Actions">
               <div class="d-flex justify-content-end gap-2">
                 <a href="{{ url_for('inventory_edit', item_id=item.id) }}"
                   class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">

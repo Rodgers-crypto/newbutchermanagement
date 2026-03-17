@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row min-vh-100 justify-content-center align-items-center mt-n5">
+  <div class="col-md-8 col-lg-6">
+    <div class="d-flex align-items-center mb-4 gap-2">
+      <a href="{{ url_for('users_list') }}" class="btn btn-outline-secondary p-2 rounded-circle">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <h2 class="fw-bold mb-0">{{ "Edit User" if user else "Add New User" }}</h2>
+    </div>
+
+    <div class="card border-0 shadow-lg bg-surface-secondary">
+      <div class="card-body p-4 p-md-5">
+        <form method="post" class="needs-validation" novalidate>
+          <div class="mb-4">
+            <label class="form-label text-uppercase small text-muted letter-spacing-1 fw-bold">Username</label>
+            <input type="text" class="form-control form-control-lg bg-surface-elevated border-0 text-white" name="username"
+              required placeholder="Enter username" value="{{ user.username if user else '' }}">
+            <div class="invalid-feedback">Please provide a username.</div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label text-uppercase small text-muted letter-spacing-1 fw-bold">
+                {{ "New Password (leave blank to keep current)" if user else "Password" }}
+            </label>
+            <input type="password" class="form-control form-control-lg bg-surface-elevated border-0 text-white" name="password"
+              {{ 'required' if not user else '' }} placeholder="Enter password">
+            <div class="invalid-feedback">Please provide a password.</div>
+          </div>
+
+          <div class="mb-5">
+            <label class="form-label text-uppercase small text-muted letter-spacing-1 fw-bold">Role</label>
+            <select class="form-select bg-surface-elevated border-0 text-white" name="role" required>
+              <option value="cashier" {% if user and user.role == 'cashier' %}selected{% endif %}>Cashier</option>
+              <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Admin</option>
+            </select>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-danger btn-lg text-uppercase letter-spacing-1 fw-bold">
+              {{ "Save Changes" if user else "Create User" }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .bg-surface-secondary {
+    background: #1e1e1e;
+  }
+
+  .bg-surface-elevated {
+    background: #2a2a2a;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    background: #333 !important;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.25);
+  }
+</style>
+{% endblock %}

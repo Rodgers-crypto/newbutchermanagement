@@ -227,6 +227,15 @@ def get_user_by_id(user_id):
     return row
 
 
+def get_all_users():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users ORDER BY username ASC")
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
 def login_required(view):
     from functools import wraps
 
@@ -486,6 +495,124 @@ def register_routes(app: Flask) -> None:
         conn.close()
         flash(f"Item '{item['name']}' deleted.", "success")
         return redirect(url_for("inventory_list"))
+
+    @app.route("/users")
+    @login_required
+    @admin_required
+    def users_list():
+        users = get_all_users()
+        return render_template("users.html", users=users)
+
+    @app.route("/users/add", methods=["GET", "POST"])
+    @login_required
+    @admin_required
+    def user_add():
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            role = request.form.get("role", "cashier")
+
+            error = None
+            if not username or not password:
+                error = "Username and password are required."
+            elif get_user_by_username(username) is not None:
+                error = f"User {username} is already registered."
+
+            if error:
+                flash(error, "danger")
+            else:
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                    (username, generate_password_hash(password), role),
+                )
+                conn.commit()
+                conn.close()
+                flash("User created successfully.", "success")
+                return redirect(url_for("users_list"))
+
+        return render_template("user_form.html", user=None)
+
+    @app.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
+    @login_required
+    @admin_required
+    def user_edit(user_id):
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        user = cur.fetchone()
+
+        if user is None:
+            conn.close()
+            flash("User not found.", "danger")
+            return redirect(url_for("users_list"))
+
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            role = request.form.get("role", user["role"])
+
+            error = None
+            if not username:
+                error = "Username is required."
+            
+            # Check if username changed and if the new one exists
+            if not error and username != user["username"]:
+                if get_user_by_username(username) is not None:
+                    error = f"User {username} is already registered."
+
+            if error:
+                flash(error, "danger")
+            else:
+                if password:
+                    cur.execute(
+                        "UPDATE users SET username = ?, password_hash = ?, role = ? WHERE id = ?",
+                        (username, generate_password_hash(password), role, user_id),
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE users SET username = ?, role = ? WHERE id = ?",
+                        (username, role, user_id),
+                    )
+                conn.commit()
+                conn.close()
+                flash("User updated successfully.", "success")
+                return redirect(url_for("users_list"))
+
+        conn.close()
+        return render_template("user_form.html", user=user)
+
+    @app.route("/users/<int:user_id>/delete", methods=["POST"])
+    @login_required
+    @admin_required
+    def user_delete(user_id):
+        if g.user["id"] == user_id:
+            flash("You cannot delete yourself.", "danger")
+            return redirect(url_for("users_list"))
+
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        user = cur.fetchone()
+
+        if user is None:
+            conn.close()
+            flash("User not found.", "danger")
+            return redirect(url_for("users_list"))
+
+        # Optional: check if user has sales
+        cur.execute("SELECT COUNT(*) as count FROM sales WHERE user_id = ?", (user_id,))
+        if cur.fetchone()["count"] > 0:
+            conn.close()
+            flash("Cannot delete user who has recorded sales. Consider changing their password or role instead.", "danger")
+            return redirect(url_for("users_list"))
+
+        cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+        flash(f"User '{user['username']}' deleted.", "success")
+        return redirect(url_for("users_list"))
 
     @app.route("/sales/new", methods=["GET", "POST"])
     @login_required
