@@ -30,12 +30,29 @@ def create_app():
         user_id = session.get("user_id")
         if user_id is None:
             g.user = None
+            g.shop = None
         else:
             g.user = get_user_by_id(user_id)
+            if g.user and "shop_id" in g.user.keys() and g.user["shop_id"]:
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM shops WHERE id = ?", (g.user["shop_id"],))
+                g.shop = cur.fetchone()
+                conn.close()
+            else:
+                g.shop = None
+                
+            if g.shop and 'status' in g.shop.keys() and g.shop['status'] == 'hold':
+                if request.endpoint not in ('login', 'static'):
+                    session.clear()
+                    flash("Your shop is currently on hold. Please contact the Superadmin.", "danger")
+                    return redirect(url_for("login"))
 
     @app.context_processor
     def inject_now():
-        return {"current_year": datetime.now().year}
+        shop_name = g.shop["name"] if getattr(g, "shop", None) else "Prime Cuts POS"
+        shop_phone = g.shop["phone_number"] if getattr(g, "shop", None) and "phone_number" in g.shop.keys() else ""
+        return {"current_year": datetime.now().year, "shop_name": shop_name, "shop_phone": shop_phone}
 
     register_routes(app)
     init_db()
@@ -54,14 +71,26 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
+    # Shops table
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shops (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL DEFAULT 'Prime Cuts',
+            phone_number TEXT DEFAULT ''
+        )
+        """
+    )
+
     # Users table
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shop_id INTEGER REFERENCES shops(id),
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('admin', 'cashier'))
+            role TEXT NOT NULL CHECK(role IN ('superadmin', 'admin', 'cashier'))
         )
         """
     )
@@ -71,16 +100,18 @@ def init_db():
         """
         CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
+            shop_id INTEGER REFERENCES shops(id),
+            name TEXT NOT NULL
         )
         """
     )
 
-    # Meat inventory (now with category link)
+    # Meat inventory (now with category link and shop isolation)
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS meat_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shop_id INTEGER REFERENCES shops(id),
             category_id INTEGER,
             name TEXT NOT NULL,
             unit TEXT NOT NULL DEFAULT 'kg',
@@ -96,6 +127,7 @@ def init_db():
         """
         CREATE TABLE IF NOT EXISTS sales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shop_id INTEGER REFERENCES shops(id),
             sale_datetime TEXT NOT NULL,
             user_id INTEGER NOT NULL,
             customer_name TEXT,
@@ -150,62 +182,65 @@ def ensure_default_admin():
     conn.close()
 
 
+def seed_shop_data(shop_id, cur):
+    """Seed categories and sample meat items for a specific shop_id."""
+    categories = ["Beef", "Chicken", "Goat (Mbuzi)", "Lamb", "Offal/Others"]
+    cur.executemany(
+        "INSERT INTO categories (shop_id, name) VALUES (?, ?)",
+        [(shop_id, cat) for cat in categories]
+    )
+    
+    cur.execute("SELECT id, name FROM categories WHERE shop_id = ?", (shop_id,))
+    cat_map = {row["name"]: row["id"] for row in cur.fetchall()}
+    
+    sample_cuts = [
+        # Beef
+        (shop_id, cat_map["Beef"], "Beef Ribs", "kg", 800.0, 0),
+        (shop_id, cat_map["Beef"], "Beef Tripe (Matumbo)", "kg", 450.0, 0),
+        (shop_id, cat_map["Beef"], "Beef with Bone", "kg", 600.0, 0),
+        (shop_id, cat_map["Beef"], "Minced Beef", "kg", 750.0, 0),
+        # Chicken
+        (shop_id, cat_map["Chicken"], "Chicken Breast", "kg", 700.0, 0),
+        (shop_id, cat_map["Chicken"], "Chicken Wings", "kg", 550.0, 0),
+        (shop_id, cat_map["Chicken"], "Full Broiler Chicken", "pcs", 600.0, 0),
+        # Goat
+        (shop_id, cat_map["Goat (Mbuzi)"], "Goat Leg", "kg", 900.0, 0),
+        (shop_id, cat_map["Goat (Mbuzi)"], "Goat Ribs", "kg", 850.0, 0),
+        (shop_id, cat_map["Goat (Mbuzi)"], "Goat Shoulder", "kg", 850.0, 0),
+        # Lamb
+        (shop_id, cat_map["Lamb"], "Lamb Chops", "kg", 1100.0, 0),
+        # Others
+        (shop_id, cat_map["Offal/Others"], "Dog Meat (Bones/Fat)", "kg", 200.0, 0),
+        (shop_id, cat_map["Offal/Others"], "Oxtail", "kg", 700.0, 0),
+    ]
+    
+    cur.executemany(
+        """
+        INSERT INTO meat_items (shop_id, category_id, name, unit, price_per_unit, stock_quantity)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        sample_cuts,
+    )
+
 def ensure_sample_data():
     """Seed categories and sample meat items if empty."""
     conn = get_db()
     cur = conn.cursor()
     
-    # Seed categories (if empty)
-    cur.execute("SELECT COUNT(*) AS c FROM categories")
-    if cur.fetchone()["c"] == 0:
-        cur.executemany(
-            "INSERT INTO categories (name) VALUES (?)",
-            [("Beef",), ("Chicken",), ("Pork",), ("Goat (Mbuzi)",), ("Lamb",), ("Offal/Others",)]
-        )
-        conn.commit()
-
-    # Seed meat items (cuts) (if empty)
-    cur.execute("SELECT COUNT(*) AS c FROM meat_items")
-    count = cur.fetchone()["c"]
-    if count == 0:
-        # Get category IDs for sample cuts
-        cur.execute("SELECT id, name FROM categories")
-        cat_map = {row["name"]: row["id"] for row in cur.fetchall()}
+    # Optionally seed first shop if it exists but is empty
+    # SQLite does not error on sqlite_master queries but standard SQL is better.
+    try:
+        cur.execute("SELECT id FROM shops ORDER BY id LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            shop_id = row["id"]
+            cur.execute("SELECT COUNT(*) AS c FROM meat_items WHERE shop_id = ?", (shop_id,))
+            if cur.fetchone()["c"] == 0:
+                seed_shop_data(shop_id, cur)
+                conn.commit()
+    except sqlite3.OperationalError:
+        pass  # shops table might not exist yet if migrate_proper wasn't run
         
-        sample_cuts = [
-            # Beef
-            (cat_map["Beef"], "Beef with Bone", "kg", 600.0, 50),
-            (cat_map["Beef"], "Beef Steak", "kg", 750.0, 30),
-            (cat_map["Beef"], "Minced Beef", "kg", 800.0, 25),
-            (cat_map["Beef"], "Beef Liver", "kg", 750.0, 15),
-            (cat_map["Beef"], "Beef Tripe (Matumbo)", "kg", 450.0, 40),
-            # Chicken
-            (cat_map["Chicken"], "Full Broiler Chicken", "pcs", 600.0, 20),
-            (cat_map["Chicken"], "Chicken Breast", "kg", 700.0, 40),
-            (cat_map["Chicken"], "Chicken Wings", "kg", 550.0, 30),
-            # Pork
-            (cat_map["Pork"], "Pork Chops", "kg", 650.0, 35),
-            (cat_map["Pork"], "Pork Belly", "kg", 700.0, 25),
-            # Goat
-            (cat_map["Goat (Mbuzi)"], "Goat Shoulder", "kg", 850.0, 30),
-            (cat_map["Goat (Mbuzi)"], "Goat Leg", "kg", 900.0, 25),
-            (cat_map["Goat (Mbuzi)"], "Goat Ribs", "kg", 850.0, 35),
-            # Lamb
-            (cat_map["Lamb"], "Lamb Chops", "kg", 1100.0, 20),
-            # Others
-            (cat_map["Offal/Others"], "Oxtail", "kg", 700.0, 10),
-            (cat_map["Offal/Others"], "Supu Bones", "kg", 150.0, 20),
-            (cat_map["Offal/Others"], "Dog Meat (Bones/Fat)", "kg", 200.0, 30),
-        ]
-        
-        cur.executemany(
-            """
-            INSERT INTO meat_items (category_id, name, unit, price_per_unit, stock_quantity)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            sample_cuts,
-        )
-        conn.commit()
     conn.close()
 
 
@@ -257,6 +292,23 @@ def admin_required(view):
             return redirect(url_for("login"))
         if g.user["role"] != "admin":
             flash("You do not have permission to access this page.", "danger")
+            if g.user["role"] == "superadmin":
+                return redirect(url_for("shops_list"))
+            return redirect(url_for("dashboard"))
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+
+def superadmin_required(view):
+    from functools import wraps
+
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("login"))
+        if g.user["role"] != "superadmin":
+            flash("Superadmin privileges required.", "danger")
             return redirect(url_for("dashboard"))
         return view(*args, **kwargs)
 
@@ -267,6 +319,8 @@ def register_routes(app: Flask) -> None:
     @app.route("/")
     def index():
         if g.user:
+            if g.user["role"] == "superadmin":
+                return redirect(url_for("shops_list"))
             return redirect(url_for("dashboard"))
         return redirect(url_for("login"))
 
@@ -291,6 +345,8 @@ def register_routes(app: Flask) -> None:
                 session["user_id"] = user["id"]
                 session["role"] = user["role"]
                 flash(f"Welcome, {user['username']}!", "success")
+                if user["role"] == "superadmin":
+                    return redirect(url_for("shops_list"))
                 return redirect(url_for("dashboard"))
 
         return render_template("login.html")
@@ -305,6 +361,9 @@ def register_routes(app: Flask) -> None:
     @app.route("/dashboard")
     @login_required
     def dashboard():
+        if g.user["role"] == "superadmin":
+            return redirect(url_for("shops_list"))
+            
         today = date.today()
         start = datetime.combine(today, datetime.min.time())
         end = datetime.combine(today, datetime.max.time())
@@ -312,41 +371,77 @@ def register_routes(app: Flask) -> None:
         conn = get_db()
         cur = conn.cursor()
 
-        cur.execute(
-            """
-            SELECT COALESCE(SUM(total_amount), 0) AS total_sales
-            FROM sales
-            WHERE sale_datetime BETWEEN ? AND ?
-            """,
-            (start.isoformat(), end.isoformat()),
-        )
+        if g.shop:
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(total_amount), 0) AS total_sales
+                FROM sales
+                WHERE shop_id = ? AND sale_datetime BETWEEN ? AND ?
+                """,
+                (g.shop["id"], start.isoformat(), end.isoformat()),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(total_amount), 0) AS total_sales
+                FROM sales
+                WHERE sale_datetime BETWEEN ? AND ?
+                """,
+                (start.isoformat(), end.isoformat()),
+            )
         total_sales = cur.fetchone()["total_sales"]
 
-        cur.execute(
-            """
-            SELECT name, stock_quantity
-            FROM meat_items
-            WHERE stock_quantity <= 10
-            ORDER BY stock_quantity ASC
-            """
-        )
+        if g.shop:
+            cur.execute(
+                """
+                SELECT name, stock_quantity
+                FROM meat_items
+                WHERE shop_id = ? AND stock_quantity <= 10
+                ORDER BY stock_quantity ASC
+                """, (g.shop["id"],)
+            )
+        else:
+            cur.execute(
+                """
+                SELECT name, stock_quantity
+                FROM meat_items
+                WHERE stock_quantity <= 10
+                ORDER BY stock_quantity ASC
+                """
+            )
         low_stock_items = cur.fetchall()
 
         # Top 5 sold cuts (Last 24 hours, min 5 sales threshold)
-        cur.execute(
-            """
-            SELECT m.name, c.name as category_name, SUM(si.quantity) as total_qty, COUNT(si.id) as sale_count
-            FROM sale_items si
-            JOIN sales s ON si.sale_id = s.id
-            JOIN meat_items m ON si.meat_item_id = m.id
-            JOIN categories c ON m.category_id = c.id
-            WHERE s.sale_datetime >= datetime('now', '-1 day')
-            GROUP BY m.id
-            HAVING sale_count >= 5
-            ORDER BY total_qty DESC
-            LIMIT 5
-            """
-        )
+        if g.shop:
+            cur.execute(
+                """
+                SELECT m.name, c.name as category_name, SUM(si.quantity) as total_qty, COUNT(si.id) as sale_count
+                FROM sale_items si
+                JOIN sales s ON si.sale_id = s.id
+                JOIN meat_items m ON si.meat_item_id = m.id
+                JOIN categories c ON m.category_id = c.id
+                WHERE s.shop_id = ? AND s.sale_datetime >= datetime('now', '-1 day')
+                GROUP BY m.id
+                HAVING sale_count >= 5
+                ORDER BY total_qty DESC
+                LIMIT 5
+                """, (g.shop["id"],)
+            )
+        else:
+            cur.execute(
+                """
+                SELECT m.name, c.name as category_name, SUM(si.quantity) as total_qty, COUNT(si.id) as sale_count
+                FROM sale_items si
+                JOIN sales s ON si.sale_id = s.id
+                JOIN meat_items m ON si.meat_item_id = m.id
+                JOIN categories c ON m.category_id = c.id
+                WHERE s.sale_datetime >= datetime('now', '-1 day')
+                GROUP BY m.id
+                HAVING sale_count >= 5
+                ORDER BY total_qty DESC
+                LIMIT 5
+                """
+            )
         top_sold_cuts = cur.fetchall()
 
         conn.close()
@@ -364,12 +459,21 @@ def register_routes(app: Flask) -> None:
     def inventory_list():
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("""
-            SELECT m.*, c.name AS category_name 
-            FROM meat_items m
-            LEFT JOIN categories c ON m.category_id = c.id
-            ORDER BY c.name, m.name ASC
-        """)
+        if g.shop:
+            cur.execute("""
+                SELECT m.*, c.name AS category_name 
+                FROM meat_items m
+                LEFT JOIN categories c ON m.category_id = c.id
+                WHERE m.shop_id = ?
+                ORDER BY c.name, m.name ASC
+            """, (g.shop["id"],))
+        else:
+            cur.execute("""
+                SELECT m.*, c.name AS category_name 
+                FROM meat_items m
+                LEFT JOIN categories c ON m.category_id = c.id
+                ORDER BY c.name, m.name ASC
+            """)
         items = cur.fetchall()
         conn.close()
         return render_template("inventory.html", items=items)
@@ -380,11 +484,14 @@ def register_routes(app: Flask) -> None:
     def inventory_add():
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM categories ORDER BY name ASC")
+        if g.shop:
+            cur.execute("SELECT * FROM categories WHERE shop_id = ? ORDER BY name ASC", (g.shop["id"],))
+        else:
+            cur.execute("SELECT * FROM categories ORDER BY name ASC")
         categories = cur.fetchall()
 
         if request.method == "POST":
-            category_id = request.form.get("category_id")
+            category_name = request.form.get("category_name", "").strip()
             name = request.form.get("name", "").strip()
             unit = request.form.get("unit", "kg").strip() or "kg"
             price_per_unit = request.form.get("price_per_unit", "0").strip()
@@ -399,18 +506,31 @@ def register_routes(app: Flask) -> None:
             except ValueError:
                 error = "Price and quantity must be numeric."
 
-            if not name or not category_id:
+            if not name or not category_name:
                 error = "Category and name are required."
+
+            if not error:
+                shop_id_val = g.shop["id"] if g.shop else None
+                if shop_id_val:
+                    cur.execute("SELECT id FROM categories WHERE name = ? AND shop_id = ?", (category_name, shop_id_val))
+                else:
+                    cur.execute("SELECT id FROM categories WHERE name = ? AND shop_id IS NULL", (category_name,))
+                cat_row = cur.fetchone()
+                if cat_row:
+                    category_id = cat_row["id"]
+                else:
+                    cur.execute("INSERT INTO categories (shop_id, name) VALUES (?, ?)", (shop_id_val, category_name))
+                    category_id = cur.lastrowid
 
             if error:
                 flash(error, "danger")
             else:
                 cur.execute(
                     """
-                    INSERT INTO meat_items (category_id, name, unit, price_per_unit, stock_quantity)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO meat_items (shop_id, category_id, name, unit, price_per_unit, stock_quantity)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (category_id, name, unit, price_val, qty_val),
+                    (g.shop["id"] if g.shop else None, category_id, name, unit, price_val, qty_val),
                 )
                 conn.commit()
                 conn.close()
@@ -426,7 +546,20 @@ def register_routes(app: Flask) -> None:
     def inventory_edit(item_id):
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM meat_items WHERE id = ?", (item_id,))
+        if g.shop:
+            cur.execute("""
+                SELECT m.*, c.name as category_name 
+                FROM meat_items m 
+                LEFT JOIN categories c ON m.category_id = c.id 
+                WHERE m.id = ? AND m.shop_id = ?
+            """, (item_id, g.shop["id"]))
+        else:
+            cur.execute("""
+                SELECT m.*, c.name as category_name 
+                FROM meat_items m 
+                LEFT JOIN categories c ON m.category_id = c.id 
+                WHERE m.id = ?
+            """, (item_id,))
         item = cur.fetchone()
 
         if item is None:
@@ -435,11 +568,14 @@ def register_routes(app: Flask) -> None:
             return redirect(url_for("inventory_list"))
 
         # Fetch categories for the form
-        cur.execute("SELECT * FROM categories ORDER BY name ASC")
+        if g.shop:
+            cur.execute("SELECT * FROM categories WHERE shop_id = ? ORDER BY name ASC", (g.shop["id"],))
+        else:
+            cur.execute("SELECT * FROM categories ORDER BY name ASC")
         categories = cur.fetchall()
 
         if request.method == "POST":
-            category_id = request.form.get("category_id")
+            category_name = request.form.get("category_name", "").strip()
             name = request.form.get("name", "").strip()
             unit = request.form.get("unit", "kg").strip() or "kg"
             price_per_unit = request.form.get("price_per_unit", "0").strip()
@@ -454,8 +590,21 @@ def register_routes(app: Flask) -> None:
             except ValueError:
                 error = "Price and quantity must be numeric."
 
-            if not name or not category_id:
+            if not name or not category_name:
                 error = "Category and name are required."
+
+            if not error:
+                shop_id_val = g.shop["id"] if g.shop else None
+                if shop_id_val:
+                    cur.execute("SELECT id FROM categories WHERE name = ? AND shop_id = ?", (category_name, shop_id_val))
+                else:
+                    cur.execute("SELECT id FROM categories WHERE name = ? AND shop_id IS NULL", (category_name,))
+                cat_row = cur.fetchone()
+                if cat_row:
+                    category_id = cat_row["id"]
+                else:
+                    cur.execute("INSERT INTO categories (shop_id, name) VALUES (?, ?)", (shop_id_val, category_name))
+                    category_id = cur.lastrowid
 
             if error:
                 flash(error, "danger")
@@ -482,7 +631,10 @@ def register_routes(app: Flask) -> None:
     def inventory_delete(item_id):
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM meat_items WHERE id = ?", (item_id,))
+        if g.shop:
+            cur.execute("SELECT * FROM meat_items WHERE id = ? AND shop_id = ?", (item_id, g.shop["id"]))
+        else:
+            cur.execute("SELECT * FROM meat_items WHERE id = ?", (item_id,))
         item = cur.fetchone()
 
         if item is None:
@@ -500,7 +652,14 @@ def register_routes(app: Flask) -> None:
     @login_required
     @admin_required
     def users_list():
-        users = get_all_users()
+        conn = get_db()
+        cur = conn.cursor()
+        if g.shop:
+            cur.execute("SELECT * FROM users WHERE shop_id = ? ORDER BY username ASC", (g.shop["id"],))
+        else:
+            cur.execute("SELECT * FROM users ORDER BY username ASC")
+        users = cur.fetchall()
+        conn.close()
         return render_template("users.html", users=users)
 
     @app.route("/users/add", methods=["GET", "POST"])
@@ -524,8 +683,8 @@ def register_routes(app: Flask) -> None:
                 conn = get_db()
                 cur = conn.cursor()
                 cur.execute(
-                    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                    (username, generate_password_hash(password), role),
+                    "INSERT INTO users (shop_id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+                    (g.shop["id"] if g.shop else None, username, generate_password_hash(password), role),
                 )
                 conn.commit()
                 conn.close()
@@ -540,7 +699,10 @@ def register_routes(app: Flask) -> None:
     def user_edit(user_id):
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        if g.shop:
+            cur.execute("SELECT * FROM users WHERE id = ? AND shop_id = ?", (user_id, g.shop["id"]))
+        else:
+            cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
         user = cur.fetchone()
 
         if user is None:
@@ -593,7 +755,10 @@ def register_routes(app: Flask) -> None:
 
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        if g.shop:
+            cur.execute("SELECT * FROM users WHERE id = ? AND shop_id = ?", (user_id, g.shop["id"]))
+        else:
+            cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
         user = cur.fetchone()
 
         if user is None:
@@ -617,20 +782,36 @@ def register_routes(app: Flask) -> None:
     @app.route("/sales/new", methods=["GET", "POST"])
     @login_required
     def new_sale():
+        if g.user["role"] == "superadmin":
+            flash("Superadmins cannot make sales. Their work is to manage the shops.", "warning")
+            return redirect(url_for("shops_list"))
+
         conn = get_db()
         cur = conn.cursor()
         
         # Fetch categories
-        cur.execute("SELECT * FROM categories ORDER BY name ASC")
+        if g.shop:
+            cur.execute("SELECT * FROM categories WHERE shop_id = ? ORDER BY name ASC", (g.shop["id"],))
+        else:
+            cur.execute("SELECT * FROM categories ORDER BY name ASC")
         categories = cur.fetchall()
 
         # Fetch all meat items with category name
-        cur.execute("""
-            SELECT m.*, c.name AS category_name 
-            FROM meat_items m
-            LEFT JOIN categories c ON m.category_id = c.id
-            ORDER BY c.name, m.name
-        """)
+        if g.shop:
+            cur.execute("""
+                SELECT m.*, c.name AS category_name 
+                FROM meat_items m
+                LEFT JOIN categories c ON m.category_id = c.id
+                WHERE m.shop_id = ?
+                ORDER BY c.name, m.name
+            """, (g.shop["id"],))
+        else:
+            cur.execute("""
+                SELECT m.*, c.name AS category_name 
+                FROM meat_items m
+                LEFT JOIN categories c ON m.category_id = c.id
+                ORDER BY c.name, m.name
+            """)
         meat_items = cur.fetchall()
 
         if request.method == "POST":
@@ -708,10 +889,10 @@ def register_routes(app: Flask) -> None:
                 now_iso = datetime.now().isoformat()
                 cur.execute(
                     """
-                    INSERT INTO sales (sale_datetime, user_id, customer_name, total_amount)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO sales (shop_id, sale_datetime, user_id, customer_name, total_amount)
+                    VALUES (?, ?, ?, ?, ?)
                     """,
-                    (now_iso, g.user["id"], customer_name or None, total_amount),
+                    (g.shop["id"] if g.shop else None, now_iso, g.user["id"], customer_name or None, total_amount),
                 )
                 sale_id = cur.lastrowid
 
@@ -756,17 +937,31 @@ def register_routes(app: Flask) -> None:
     @app.route("/sales/<int:sale_id>/receipt")
     @login_required
     def sale_receipt(sale_id):
+        if g.user["role"] == "superadmin":
+            return redirect(url_for("shops_list"))
+            
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT s.*, u.username
-            FROM sales s
-            JOIN users u ON s.user_id = u.id
-            WHERE s.id = ?
-            """,
-            (sale_id,),
-        )
+        if g.shop:
+            cur.execute(
+                """
+                SELECT s.*, u.username
+                FROM sales s
+                JOIN users u ON s.user_id = u.id
+                WHERE s.id = ? AND s.shop_id = ?
+                """,
+                (sale_id, g.shop["id"]),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT s.*, u.username
+                FROM sales s
+                JOIN users u ON s.user_id = u.id
+                WHERE s.id = ?
+                """,
+                (sale_id,),
+            )
         sale = cur.fetchone()
         if sale is None:
             conn.close()
@@ -789,6 +984,10 @@ def register_routes(app: Flask) -> None:
     @app.route("/reports", methods=["GET", "POST"])
     @login_required
     def reports():
+        if g.user["role"] == "superadmin":
+            flash("Superadmins cannot access shop reports.", "warning")
+            return redirect(url_for("shops_list"))
+            
         period = request.values.get("period", "daily")
         today = date.today()
 
@@ -806,36 +1005,68 @@ def register_routes(app: Flask) -> None:
         conn = get_db()
         cur = conn.cursor()
 
-        cur.execute(
-            """
-            SELECT
-                DATE(sale_datetime) AS sale_date,
-                COUNT(*) AS num_sales,
-                SUM(total_amount) AS total_sales
-            FROM sales
-            WHERE sale_datetime BETWEEN ? AND ?
-            GROUP BY DATE(sale_datetime)
-            ORDER BY sale_date ASC
-            """,
-            (start_dt.isoformat(), end_dt.isoformat()),
-        )
+        if g.shop:
+            cur.execute(
+                """
+                SELECT
+                    DATE(sale_datetime) AS sale_date,
+                    COUNT(*) AS num_sales,
+                    SUM(total_amount) AS total_sales
+                FROM sales
+                WHERE shop_id = ? AND sale_datetime BETWEEN ? AND ?
+                GROUP BY DATE(sale_datetime)
+                ORDER BY sale_date ASC
+                """,
+                (g.shop["id"], start_dt.isoformat(), end_dt.isoformat()),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    DATE(sale_datetime) AS sale_date,
+                    COUNT(*) AS num_sales,
+                    SUM(total_amount) AS total_sales
+                FROM sales
+                WHERE sale_datetime BETWEEN ? AND ?
+                GROUP BY DATE(sale_datetime)
+                ORDER BY sale_date ASC
+                """,
+                (start_dt.isoformat(), end_dt.isoformat()),
+            )
         summary_rows = cur.fetchall()
 
-        cur.execute(
-            """
-            SELECT
-                m.name,
-                SUM(si.quantity) AS total_qty,
-                SUM(si.line_total) AS total_amount
-            FROM sale_items si
-            JOIN meat_items m ON si.meat_item_id = m.id
-            JOIN sales s ON si.sale_id = s.id
-            WHERE s.sale_datetime BETWEEN ? AND ?
-            GROUP BY m.name
-            ORDER BY total_amount DESC
-            """,
-            (start_dt.isoformat(), end_dt.isoformat()),
-        )
+        if g.shop:
+            cur.execute(
+                """
+                SELECT
+                    m.name,
+                    SUM(si.quantity) AS total_qty,
+                    SUM(si.line_total) AS total_amount
+                FROM sale_items si
+                JOIN meat_items m ON si.meat_item_id = m.id
+                JOIN sales s ON si.sale_id = s.id
+                WHERE s.shop_id = ? AND s.sale_datetime BETWEEN ? AND ?
+                GROUP BY m.name
+                ORDER BY total_amount DESC
+                """,
+                (g.shop["id"], start_dt.isoformat(), end_dt.isoformat()),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    m.name,
+                    SUM(si.quantity) AS total_qty,
+                    SUM(si.line_total) AS total_amount
+                FROM sale_items si
+                JOIN meat_items m ON si.meat_item_id = m.id
+                JOIN sales s ON si.sale_id = s.id
+                WHERE s.sale_datetime BETWEEN ? AND ?
+                GROUP BY m.name
+                ORDER BY total_amount DESC
+                """,
+                (start_dt.isoformat(), end_dt.isoformat()),
+            )
         by_item_rows = cur.fetchall()
 
         conn.close()
@@ -848,6 +1079,123 @@ def register_routes(app: Flask) -> None:
             summary_rows=summary_rows,
             by_item_rows=by_item_rows,
         )
+
+    # --- SUPERADMIN ROUTES ---
+    @app.route("/shops")
+    @login_required
+    @superadmin_required
+    def shops_list():
+        conn = get_db()
+        cur = conn.cursor()
+        
+        today_str = datetime.now().strftime('%Y-%m-%d') + '%'
+        
+        cur.execute("""
+            SELECT s.*, 
+                   (SELECT COUNT(*) FROM users u WHERE u.shop_id = s.id) as users_count,
+                   (SELECT SUM(total_amount) FROM sales sa WHERE sa.shop_id = s.id AND sa.sale_datetime LIKE ?) as total_revenue,
+                   (SELECT COUNT(*) FROM sales sa WHERE sa.shop_id = s.id AND sa.sale_datetime LIKE ?) as sales_count
+            FROM shops s 
+            ORDER BY s.id
+        """, (today_str, today_str))
+        shops = cur.fetchall()
+        
+        conn.close()
+        return render_template("shops.html", shops=shops)
+
+    @app.route("/shops/<int:shop_id>/toggle_status", methods=["POST"])
+    @login_required
+    @superadmin_required
+    def shop_toggle_status(shop_id):
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT status, name FROM shops WHERE id = ?", (shop_id,))
+        shop = cur.fetchone()
+        if shop:
+            new_status = 'active' if 'status' in shop.keys() and shop['status'] == 'hold' else 'hold'
+            cur.execute("UPDATE shops SET status = ? WHERE id = ?", (new_status, shop_id))
+            conn.commit()
+            flash(f"Shop {shop['name']} status updated to {new_status}.", "success")
+        else:
+            flash("Shop not found.", "danger")
+        conn.close()
+        return redirect(url_for("shops_list"))
+
+    @app.route("/shops/<int:shop_id>/delete", methods=["POST"])
+    @login_required
+    @superadmin_required
+    def shop_delete(shop_id):
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM shops WHERE id = ?", (shop_id,))
+        cur.execute("DELETE FROM users WHERE shop_id = ?", (shop_id,))
+        cur.execute("DELETE FROM meat_items WHERE shop_id = ?", (shop_id,))
+        cur.execute("DELETE FROM categories WHERE shop_id = ?", (shop_id,))
+        cur.execute("DELETE FROM sales WHERE shop_id = ?", (shop_id,))
+        cur.execute("DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE shop_id = ?)", (shop_id,))
+        conn.commit()
+        conn.close()
+        flash("Shop and all its associated data have been permanently deleted.", "success")
+        return redirect(url_for("shops_list"))
+
+    @app.route("/shops/add", methods=["GET", "POST"])
+    @login_required
+    @superadmin_required
+    def shop_add():
+        if request.method == "POST":
+            name = request.form.get("name", "").strip()
+            phone_number = request.form.get("phone_number", "").strip()
+            admin_username = request.form.get("admin_username", "").strip()
+            admin_password = request.form.get("admin_password", "")
+            
+            if not name or not admin_username or not admin_password:
+                flash("All fields are required.", "danger")
+            else:
+                if get_user_by_username(admin_username):
+                    flash("Username already exists.", "danger")
+                else:
+                    conn = get_db()
+                    cur = conn.cursor()
+                    cur.execute("INSERT INTO shops (name, phone_number) VALUES (?, ?)", (name, phone_number))
+                    shop_id = cur.lastrowid
+                    
+                    cur.execute(
+                        "INSERT INTO users (shop_id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+                        (shop_id, admin_username, generate_password_hash(admin_password), "admin")
+                    )
+                    
+                    # Seed initial categories and stock for this shop
+                    seed_shop_data(shop_id, cur)
+                    
+                    conn.commit()
+                    conn.close()
+                    flash(f"Shop '{name}' created with admin '{admin_username}'.", "success")
+                    return redirect(url_for("shops_list"))
+        return render_template("shop_form.html")
+
+    @app.route("/settings", methods=["GET", "POST"])
+    @login_required
+    @admin_required
+    def settings():
+        if not g.shop:
+            flash("Superadmins cannot access shop settings.", "warning")
+            return redirect(url_for("dashboard"))
+            
+        if request.method == "POST":
+            name = request.form.get("name", "").strip()
+            phone_number = request.form.get("phone_number", "").strip()
+            if not name:
+                flash("Shop name is required.", "danger")
+            else:
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute("UPDATE shops SET name = ?, phone_number = ? WHERE id = ?", (name, phone_number, g.shop["id"]))
+                conn.commit()
+                conn.close()
+                flash("Shop settings updated successfully.", "success")
+                return redirect(url_for("dashboard"))
+                
+        return render_template("settings.html", shop_name=g.shop["name"], shop_phone=g.shop["phone_number"] if "phone_number" in g.shop.keys() else "")
 
     @app.route("/api/meat/<int:item_id>/price", methods=["GET"])
     @login_required

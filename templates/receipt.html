@@ -24,11 +24,12 @@
           <div class="receipt-logo mb-2">
             <i class="fa-solid fa-cloud-meatball fa-2x text-dark"></i>
           </div>
-          <h4 class="fw-bold text-uppercase m-0">Prime Cuts</h4>
-          <div class="receipt-divider my-2"></div>
-          <p class="small mb-0">Premium Butcher Shop</p>
+          <h4 class="fw-bold text-uppercase m-0">{{ shop_name }}</h4>
+          <p class="small mb-0">Receipt</p>
           <p class="small mb-0">123 Market Street, Nairobi</p>
-          <p class="small">Tel: +254 700 000 000</p>
+          {% if shop_phone %}
+          <p class="small">Tel: {{ shop_phone }}</p>
+          {% endif %}
         </div>
 
         <!-- Meta Info -->

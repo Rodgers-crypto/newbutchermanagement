@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prime Cuts POS</title>
+  <title>{{ shop_name }} POS</title>
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,7 +152,7 @@
         {% endif %}
         <a class="navbar-brand d-flex align-items-center gap-2 m-0" href="{{ url_for('dashboard') }}">
           <i class="fa-solid fa-cloud-meatball text-danger"></i>
-          <span>Prime Cuts</span>
+          <span>{{ shop_name }}</span>
         </a>
       </div>
 
@@ -161,7 +161,7 @@
         {% if g.user %}
         <div class="offcanvas-header">
           <h5 class="offcanvas-title d-flex align-items-center gap-2">
-            <i class="fa-solid fa-cloud-meatball text-danger"></i> Prime Cuts
+            <i class="fa-solid fa-cloud-meatball text-danger"></i> {{ shop_name }}
           </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
             aria-label="Close"></button>
@@ -171,6 +171,7 @@
         <div class="offcanvas-body">
           {% if g.user %}
           <ul class="navbar-nav me-auto ms-lg-4 gap-lg-4">
+            {% if g.user["role"] != 'superadmin' %}
             <li class="nav-item">
               <a class="nav-link {{ 'active' if request.endpoint == 'dashboard' else '' }}"
                 href="{{ url_for('dashboard') }}">
@@ -189,6 +190,7 @@
                 <i class="fa-solid fa-file-invoice-dollar fa-faint me-2"></i> Reports
               </a>
             </li>
+            {% endif %}
             {% if g.user["role"] == 'admin' %}
             <li class="nav-item">
               <a class="nav-link {{ 'active' if request.endpoint == 'inventory_list' else '' }}"
@@ -200,6 +202,22 @@
               <a class="nav-link {{ 'active' if 'users' in request.endpoint else '' }}"
                 href="{{ url_for('users_list') }}">
                 <i class="fa-solid fa-users fa-faint me-2"></i> Users
+              </a>
+            </li>
+            {% endif %}
+            {% if g.user["role"] == 'superadmin' %}
+            <li class="nav-item">
+              <a class="nav-link {{ 'active' if 'shops' in request.endpoint else '' }}"
+                href="{{ url_for('shops_list') }}">
+                <i class="fa-solid fa-store fa-faint me-2"></i> Shops
+              </a>
+            </li>
+            {% endif %}
+            {% if g.user["role"] == 'admin' %}
+            <li class="nav-item">
+              <a class="nav-link {{ 'active' if request.endpoint == 'settings' else '' }}"
+                href="{{ url_for('settings') }}">
+                <i class="fa-solid fa-gear fa-faint me-2"></i> Settings
               </a>
             </li>
             {% endif %}

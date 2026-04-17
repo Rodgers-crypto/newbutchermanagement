@@ -2,7 +2,14 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="fw-bold mb-0">Sales Reports</h2>
+  <div>
+    <h2 class="fw-bold mb-0">Sales Reports</h2>
+    {% if shop_phone %}
+    <div class="text-muted small border border-secondary px-2 py-1 rounded d-inline-block mt-2">
+      <i class="fa-solid fa-phone fa-xs me-1"></i> {{ shop_phone }}
+    </div>
+    {% endif %}
+  </div>
   <div class="gap-2 d-flex">
     <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
       <svg width="18" height="18" fill="none" class="me-2" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

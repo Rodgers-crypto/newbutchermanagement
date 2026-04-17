@@ -18,13 +18,15 @@
         <form method="post" class="needs-validation" novalidate>
           <div class="mb-4">
             <label class="form-label text-uppercase small text-muted letter-spacing-1 fw-bold">Category</label>
-            <select class="form-select bg-surface-elevated border-0 text-white" name="category_id" required>
-              <option value="" disabled selected>Select a category</option>
+            <input type="text" list="category-options" class="form-control bg-surface-elevated border-0 text-white" 
+                   name="category_name" placeholder="Select or type a category" required 
+                   value="{{ item.category_name if item and item.category_name else '' }}">
+            <datalist id="category-options">
               {% for cat in categories %}
-              <option value="{{ cat.id }}" {% if item and item.category_id==cat.id %}selected{% endif %}>{{ cat.name }}
-              </option>
+              <option value="{{ cat.name }}">
               {% endfor %}
-            </select>
+            </datalist>
+            <div class="invalid-feedback">Please select or write a category.</div>
           </div>
 
           <div class="mb-4">
